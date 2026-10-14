@@ -7,5 +7,9 @@ export default defineConfig({
     environment: 'jsdom',
     clearMocks: true,
     restoreMocks: true,
+    include: [
+      'src/**/*.{test,spec}.?(c|m)[jt]s?(x)',
+      '../../packages/contracts/src/**/*.{test,spec}.?(c|m)[jt]s?(x)',
+    ],
   },
 });

@@ -39,11 +39,11 @@
 - Consumes: 01 阶段 IP 和 AssetVersion
 - Produces: `create_brand_candidate(ip_id: UUID, source_version_id: UUID|None) -> BrandTemplateVersion`; `approve_brand_version(id: UUID) -> BrandTemplateVersion`；动态 slots: title/episode_number/content
 
-- [ ] **Step 1: Write the failing test** — `test_brand_immutable_after_approval / test_cross_ip_template_denied / test_locked_logo_edit_denied`: 普通 Episode 不能直接改品牌元素；批准新版本不篡改旧版
-- [ ] **Step 2: Run the test to verify RED** — `cd services/api && uv run pytest tests/test_templates.py -v`; expected **FAIL** because the behavior has not been implemented.
-- [ ] **Step 3: Implement the minimal behavior** — 建立 BrandTemplate/BrandTemplateVersion，草案批准/冻结，品牌背景前景和动态插槽分离；服务端校验编辑权限
-- [ ] **Step 4: Run test to verify GREEN** — `cd services/api && uv run pytest tests/test_templates.py -v`; expected **PASS**. Run neighboring regression tests.
-- [ ] **Step 5: Commit** — `git add services/api/app services/api/alembic packages/contracts/src/brand.ts services/api/tests/test_templates.py && git commit -m "feat(template): add frozen IP brand templates"`.
+- [x] **Step 1: Write the failing test** — `test_templates.py` 覆盖批准冻结与派生、跨 IP 拒绝、普通文档外壳修改拒绝；补充 Zod 模板契约测试。
+- [x] **Step 2: Run the test to verify RED** — 后端专项测试因 `app.services.templates` 尚不存在而在收集时失败；后续完成实现后转绿。
+- [x] **Step 3: Implement the minimal behavior** — 建立 IP-scoped BrandTemplate/BrandTemplateVersion、候选/审批/派生 API 和迁移；品牌静态元素与标题/期号动态槽位分开，版本引用素材需同 IP 已批准；共享服务校验拒绝普通文档变更外壳。
+- [x] **Step 4: Run test to verify GREEN** — `uv run --project services/api pytest -v`（26 passed）；`pnpm --filter @ip-studio/web test`（含 brand schema 测试，4 passed）；`pnpm --filter @ip-studio/web build` 成功；SQLite Alembic upgrade/check/downgrade/upgrade 通过；`git diff --check` 通过。
+- [x] **Step 5: Commit** — `feat(template): add frozen IP brand templates`。
 
 
 ### Task 2: 4/6/8 格布局与页面继承

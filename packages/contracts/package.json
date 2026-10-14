@@ -3,6 +3,10 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./domain": "./src/domain.ts"
+    "./domain": "./src/domain.ts",
+    "./brand": "./src/brand.ts"
+  },
+  "dependencies": {
+    "zod": "^4.6.7"
   }
 }

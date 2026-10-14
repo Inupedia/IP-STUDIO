@@ -57,7 +57,19 @@
 
 ## 阶段 02：品牌模板与画布
 
-- [ ] Task 1–5：见 `2026-10-14-02-brand-templates-and-canvas.md`
+- [x] Task 1：品牌模板的数据约束与批准冻结
+- [ ] Task 2：4/6/8 格布局与页面继承
+- [ ] Task 3：CanvasDocument v1 与消息方向协议
+- [ ] Task 4：画布品牌层及独立内容图层
+- [ ] Task 5：图层编辑、撤销保存、并发冲突
+
+#### Task 1 交付记录
+
+- 提交：`feat(template): add frozen IP brand templates`
+- RED 证据：新增 API/service 测试后，首次运行因 `app.services.templates` 尚不存在而在收集时失败。
+- GREEN 与回归：`uv run --project services/api pytest -v`（26 passed）；`pnpm --filter @ip-studio/web test`（含品牌协议 4 passed）；`pnpm --filter @ip-studio/web build` 成功；SQLite Alembic upgrade/check/downgrade/upgrade 通过。
+- 结果：品牌模板按 IP 隔离，静态外壳和标题/期号槽位分别存储；批准版本不可覆盖，只能派生；锁定素材必须属于同 IP 且已批准；共享校验拒绝普通文档请求改动外壳。
+- 限制：PostgreSQL 运行时仍受 Docker daemon 未启动及缺少本机 PostgreSQL 影响；改用 SQLite 测试和迁移生命周期验证。
 
 ## 阶段 03：剧本分镜与生产
 

@@ -10,6 +10,7 @@ from app.api.assets import router as assets_router
 from app.api.bibles import router as bibles_router
 from app.api.ips import router as ips_router
 from app.api.story import router as story_router
+from app.api.templates import router as templates_router
 from app.config import Settings
 from app.db import make_engine, make_session_factory
 from app.models import Base
@@ -77,6 +78,7 @@ def create_app(
     application.include_router(bibles_router)
     application.include_router(ips_router)
     application.include_router(story_router)
+    application.include_router(templates_router)
     return application
 
 

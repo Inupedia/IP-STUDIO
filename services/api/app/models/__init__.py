@@ -3,6 +3,7 @@ from app.models.assets import Asset, AssetLink, AssetVersion, Blob
 from app.models.bibles import Character, CharacterVersion, Style, StyleVersion
 from app.models.ip import IP
 from app.models.story import Episode, Series
+from app.models.templates import BrandTemplate, BrandTemplateVersion
 from app.models.workspace import User, Workspace
 
 __all__ = [
@@ -10,6 +11,8 @@ __all__ = [
     "AssetLink",
     "AssetVersion",
     "Base",
+    "BrandTemplate",
+    "BrandTemplateVersion",
     "Blob",
     "Character",
     "CharacterVersion",
