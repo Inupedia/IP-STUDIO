@@ -9,7 +9,8 @@
     "./canvas": "./src/canvas.ts",
     "./script": "./src/script.ts",
     "./generation": "./src/generation.ts",
-    "./codex": "./src/codex.ts"
+    "./codex": "./src/codex.ts",
+    "./canvas-patch": "./src/canvas-patch.ts"
   },
   "dependencies": {
     "zod": "^4.6.7"

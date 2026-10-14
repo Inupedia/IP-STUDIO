@@ -152,7 +152,7 @@
 
 - [x] Task 1：Codex 环境能力自检 PoC
 - [x] Task 2：本地任务 Adapter 与图片安全回流
-- [ ] Task 3：结构化 CanvasPatch 白名单与授权校验
+- [x] Task 3：结构化 CanvasPatch 白名单与授权校验
 - [ ] Task 4：用户确认、应用 Patch 与降级体验
 
 #### Task 1 交付记录
@@ -172,6 +172,14 @@
 - 迁移验证：SQLite `0010_codex_runs` upgrade、`alembic check`（无差异）、downgrade base、再次 upgrade 全部通过。
 - 结果：管理员显式启动任务，服务端重新核验通过真实 ImageGen 的 Codex CLI 路径与版本；CLI 通过独立受限临时目录执行，只附加冻结参考包，校验 SHA-256、ZIP 路径、原生 ImageGen 事件、输出路径、PNG/JPEG 魔数、完整解码和大小/像素限制。输出来源记为 `codex_native`，与当前任务原子关联为 `pending_review` 候选；生成失败不推进任务、不创建候选。状态支持排队、运行、候选就绪、失败，具备超时和管理员取消；数据库约束阻止同任务并发 run 和跨任务候选绑定。前端只有 E2E 探测成功后开放本机生图入口，ChatGPT Web 手动生图与导入始终保留。
 - 限制：本任务通过模拟 CLI 子进程事件验证 Adapter，不再次触发真实生图；真实原生 ImageGen 的 CLI/工具/图片能力探测证据沿用 Task 1。PostgreSQL runtime smoke test 仍受本机 Docker/PostgreSQL 服务不可用限制；SQLite migration 生命周期与 API 集成已验证。
+
+#### Task 3 交付记录
+
+- 提交：`feat(codex): validate scoped proposed canvas patches`
+- RED 证据：后端测试在 Patch validator 模块缺失时因预期导入错误失败；合同测试在 `canvas-patch.ts` 尚不存在时无法导入。
+- GREEN 与回归：后端 Patch 专项 8 passed；完整后端 72 passed；完整前端 44 passed；CanvasPatch/Codex/Generation 合同 7 passed；Vite/TypeScript build 和 `git diff --check` 通过。
+- 结果：新增严格的 Pydantic 与 Zod Patch 协议，只有 `set_text`、`set_transform`、`replace_image_asset`、`insert_element`、`remove_element` 五类操作；最多 50 项。校验 workspace/IP/Episode/Document/base revision、元素 ID 和类型、锁定元素/面板框、Transform 数值与同 IP 已批准素材引用。逐项生成隔离的预览副本，验证不改变输入文档，也没有数据库写入路径；任意 SQL、命令、路径或额外字段均无法通过协议解析。
+- 限制：Patch 数据验证已完成；向本机 Codex 请求提案、持久化待审批记录、人工批准/拒绝与 CAS 应用在 Task 4 实现。
 
 ## 阶段 05：导出与验收
 

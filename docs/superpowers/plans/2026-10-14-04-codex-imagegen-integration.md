@@ -75,11 +75,11 @@
 - Consumes: CanvasDocumentV1、品牌锁定规则、IP/版本权限
 - Produces: `propose_patch(document_id: UUID, instruction: str) -> CanvasPatch`; `validate_canvas_patch(patch: CanvasPatch, scope: Scope, current_revision: int) -> ValidatedPatch`
 
-- [ ] **Step 1: Write the failing test** — `test_cross_ip_patch_denied / test_locked_logo_patch_denied / test_unknown_operation_denied`；仅 set_text/set_transform/replace_image_asset/insert_element/remove_element；拒绝任意 SQL、路径和执行命令
-- [ ] **Step 2: Verify RED** — Run `cd services/api && uv run pytest tests/test_codex_patches.py -v`；expected **FAIL** for missing behavior, not missing dependencies.
-- [ ] **Step 3: Implement minimally** — 限制 Patch AST 类型、ID 所属与具体版本、属性值范围和 max operations；只返回待审批建议，不直接执行写入
-- [ ] **Step 4: Verify GREEN** — Run `cd services/api && uv run pytest tests/test_codex_patches.py -v`；expected **PASS**. Also run relevant regression suite.
-- [ ] **Step 5: Commit** — `git add packages/contracts/src/canvas-patch.ts packages/contracts/src/canvas-patch.test.ts services/api/app/codex/patches.py services/api/app/services/patch_validator.py services/api/tests/test_codex_patches.py && git commit -m "feat(codex): validate scoped proposed canvas patches"`.
+- [x] **Step 1: Write the failing test** — 覆盖跨 IP、锁定画布元素、未知/任意命令、stale revision、跨 IP 素材、越界 Transform、预览不写入等场景；只接受 5 种结构化操作。
+- [x] **Step 2: Verify RED** — `test_codex_patches.py` 在 validator 尚未实现时因模块缺失而按预期失败；合同测试在 Zod schema 文件不存在时失败。
+- [x] **Step 3: Implement minimally** — 使用严格 Pydantic/Zod 判别联合；最多 50 个操作；服务端绑定 workspace/IP/episode/document/base revision，按当前 Canvas 元素与同 IP 批准素材集合校验 ID、锁定状态、目标类型和范围；返回验证后的文档预览副本，不直接写入。
+- [x] **Step 4: Verify GREEN** — Patch validator 专项 8 passed；完整后端 72 passed；完整前端 44 passed；Contracts 专项（CanvasPatch/Codex/Generation）7 passed；Vite/TypeScript build 与 `git diff --check` 通过。
+- [x] **Step 5: Commit** — `feat(codex): validate scoped proposed canvas patches`。
 
 
 ### Task 4: 用户确认、应用 Patch 与降级体验
