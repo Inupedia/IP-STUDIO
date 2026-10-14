@@ -57,11 +57,11 @@
 - Consumes: create_app() 与 DB Session；JWT/单管理员隔离可先使用 test auth stub，正式密码认证纳入本任务
 - Produces: `create_ip(workspace_id: UUID, code: str, name: str) -> IP`；GET/POST /api/v1/ips；`create_episode(series_id: UUID, number: int, title: str) -> Episode`
 
-- [ ] **Step 1: Write the failing test** — `test_duplicate_ip_code_rejected / test_episode_number_unique / test_other_workspace_not_visible`: (workspace,code) 与 (series,number) 唯一；跨 workspace 不可读取
-- [ ] **Step 2: Run the test to verify RED** — `cd services/api && uv run pytest tests/test_ips.py -v`; expected **FAIL** because the behavior has not been implemented.
-- [ ] **Step 3: Implement the minimal behavior** — SQLAlchemy 模型、Alembic 迁移、服务层、scope validation、基础认证与 CRUD；保证状态与 API 结构固定
-- [ ] **Step 4: Run test to verify GREEN** — `cd services/api && uv run pytest tests/test_ips.py -v`; expected **PASS**. Run neighboring regression tests.
-- [ ] **Step 5: Commit** — `git add services/api/app services/api/alembic services/api/tests/test_ips.py && git commit -m "feat(domain): add scoped IP and story models"`.
+- [x] **Step 1: Write the failing test** — `test_duplicate_ip_code_rejected / test_episode_number_unique / test_other_workspace_not_visible`: (workspace,code) 与 (series,number) 唯一；跨 workspace 不可读取
+- [x] **Step 2: Run the test to verify RED** — `cd services/api && uv run pytest tests/test_ips.py -v`; 缺少路由时重复资源请求返回 405，预期断言失败。
+- [x] **Step 3: Implement the minimal behavior** — SQLAlchemy 模型、Alembic 迁移、服务层、scope validation、JWT 单管理员认证与 IP/Series/Episode CRUD。
+- [x] **Step 4: Run test to verify GREEN** — `uv run --project services/api pytest -v`；6 passed。SQLite Alembic upgrade/check/downgrade/upgrade 均通过。
+- [x] **Step 5: Commit** — `feat(domain): add scoped IP and story models`。
 
 
 ### Task 3: 安全上传 / Blob 去重 / AssetVersion

@@ -15,10 +15,19 @@
 
 ### 后续任务
 
-- [ ] Task 2：Workspace / IP / Series / Episode 数据与 API
+- [x] Task 2：Workspace / IP / Series / Episode 数据与 API
 - [ ] Task 3：安全上传 / Blob 去重 / AssetVersion
 - [ ] Task 4：Character Bible 与 Style Bible 批准版本
 - [ ] Task 5：多 IP 资产管理页面
+
+#### Task 2 交付记录
+
+- 提交：`feat(domain): add scoped IP and story models`
+- RED 证据：新增三个唯一性/隔离测试后，在模型与路由实现前运行 `pytest tests/test_ips.py -v`，重复 IP、重复分集和跨 workspace 访问均因路由未实现而失败（405）。
+- GREEN 与回归：`uv run --project services/api pytest -v`（6 passed）；`uv sync --project services/api --locked --group dev`。
+- 数据迁移：SQLite 上执行 Alembic upgrade、`alembic check`（无新变更）、downgrade base、再次 upgrade，全部通过。
+- 结果：建立单管理员 workspace、IP/Series/Episode 模型与迁移、workspace-scoped CRUD、JWT 登录及密码哈希；不同 workspace 的资源通过服务查询隔离，复合外键约束归属。
+- 环境限制：本机 Docker daemon 未运行，且没有本地 PostgreSQL 二进制，因此本任务无法做 PostgreSQL 容器运行时冒烟；使用 SQLite 跑 API 测试和迁移生命周期验证。Task 1 的 Compose 配置检查已通过。
 
 ## 阶段 02：品牌模板与画布
 
