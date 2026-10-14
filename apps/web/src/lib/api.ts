@@ -23,6 +23,18 @@ import type {
 import type { CodexCapabilityV1, CodexRunV1 } from '@ip-studio/contracts/codex';
 import type { CodexPatchProposalV1 } from '@ip-studio/contracts/canvas-patch';
 
+export interface ExportJobReadV1 {
+  id: string;
+  episode_id: string;
+  revision_no: number;
+  format: 'png_zip' | 'project_zip' | 'pptx';
+  status: 'complete' | 'failed';
+  page_count: number;
+  warnings: string[];
+  download_url: string | null;
+  created_at: string;
+}
+
 const TOKEN_KEY = 'ip-studio-access-token';
 const AUTH_EXPIRED_EVENT = 'ip-studio:auth-expired';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000';
@@ -363,6 +375,31 @@ export const api = {
       method: 'POST',
       body: jsonBody({ review_note: reviewNote }),
     });
+  },
+
+  createPngExport(episodeId: string, revisionNo: number, pages: Blob[]): Promise<ExportJobReadV1> {
+    const body = new FormData();
+    body.set('revision_no', String(revisionNo));
+    pages.forEach((page, index) => body.append('pages', page, `page-${index + 1}.png`));
+    return request(`/api/v1/episodes/${episodeId}/export`, { method: 'POST', body });
+  },
+
+  async downloadExport(exportId: string): Promise<Blob> {
+    const headers = new Headers();
+    if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`);
+    const response = await fetch(`${API_BASE_URL}/api/v1/exports/${exportId}/download`, { headers });
+    if (!response.ok) {
+      let message = `请求失败（${response.status}）`;
+      try {
+        const body = (await response.json()) as { detail?: unknown };
+        if (typeof body.detail === 'string') message = body.detail;
+      } catch {
+        // Keep the status-based message when the server does not return JSON.
+      }
+      if (response.status === 401) expireAccessToken();
+      throw new ApiError(message, response.status);
+    }
+    return response.blob();
   },
 
   async getGenerationReferenceBundle(taskId: string): Promise<Blob> {

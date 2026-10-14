@@ -192,4 +192,17 @@
 
 ## 阶段 05：导出与验收
 
-- [ ] Task 1–5：见 `2026-10-14-05-export-and-acceptance.md`
+- [x] Task 1：原尺寸 PNG 多页导出
+- [ ] Task 2：工程 ZIP 备份/恢复与完整性校验
+- [ ] Task 3：原生对象 PPTX 导出
+- [ ] Task 4：EP01 / EP02 回归和 AC-01～AC-26 验收
+- [ ] Task 5：本地部署、备份/恢复与交接审核
+
+#### Task 1 交付记录
+
+- 提交：`feat(export): generate PNG manga pages`
+- RED 证据：导出 API 实现前三项集成测试均因 `/episodes/{id}/export` 返回 404 而失败；前端测试因 `exportPng` 模块尚不存在而失败。
+- GREEN 与回归：导出 API 专项 3 passed；完整后端 `uv run --project services/api pytest -q`（80 passed）；完整前端 `pnpm --filter @ip-studio/web test`（52 passed）；CanvasPatch/Codex/Generation 合同专项 8 passed；前端构建成功；`git diff --check` 通过。
+- 迁移验证：SQLite Alembic upgrade head、`alembic check`（无漂移）、downgrade base、再次 upgrade head 与 check 全部通过。
+- 结果：前端按页面 `order` 使用共享 Konva 品牌/内容图层生成原尺寸 PNG，显式加载全部引用素材，不包含参考线；API 按选定的不可变 document revision 校验页数、PNG 解码、尺寸与上限，按序打包 ZIP，持久化 SHA-256 工件和导出任务，并提供 workspace-scoped 元数据与下载端点。
+- 验收边界：前端单测以 mock Stage 校验尺寸、品牌传入和 `pixelRatio=1`；真实浏览器栅格与 EP01/EP02 外壳一致性留在 Task 4 E2E 实测。本机 PostgreSQL runtime 仍不可用，当前以 SQLite API 与迁移生命周期验证。

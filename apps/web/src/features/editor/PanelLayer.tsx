@@ -24,6 +24,7 @@ function useImage(source: string | undefined): HTMLImageElement | undefined {
       return;
     }
     const loadedImage = new window.Image();
+    loadedImage.crossOrigin = 'anonymous';
     loadedImage.onload = () => setImage(loadedImage);
     loadedImage.onerror = () => setImage(undefined);
     loadedImage.src = source;

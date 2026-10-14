@@ -51,6 +51,10 @@ class DocumentRevision(Base):
         UniqueConstraint(
             "episode_id", "revision_no", name="uq_document_revisions_episode_revision"
         ),
+        UniqueConstraint(
+            "episode_id", "workspace_id", "revision_no",
+            name="uq_document_revisions_episode_workspace_revision",
+        ),
         CheckConstraint("revision_no > 0", name="ck_document_revisions_revision_positive"),
     )
 

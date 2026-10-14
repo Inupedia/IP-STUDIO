@@ -39,11 +39,11 @@
 - Consumes: BrandTemplateVersion + CanvasDocumentV1 + blob 加载器
 - Produces: `renderPageToPng(doc: CanvasDocumentV1, pageId: string): Promise<Blob>`; POST /api/v1/episodes/{id}/export 绑定 revision
 
-- [ ] **Step 1: Write the failing test** — `test_png_correct_dimensions_and_brand_shell / test_export_revision_immutable`；1080×1440 原始尺寸，无画布参考线，文字清晰且变更后导出绑定新 revision
-- [ ] **Step 2: Verify RED** — Run `pnpm --dir apps/web exec vitest run src/features/export/exportPng.test.ts && cd services/api && uv run pytest tests/test_exports.py -v`；expected **FAIL** for missing behavior, not missing dependencies.
-- [ ] **Step 3: Implement minimally** — 在当前画布场景按 document 尺寸渲染；逐页命名有序，出错不产生完成状态；入库导出工件和警告
-- [ ] **Step 4: Verify GREEN** — Run `pnpm --dir apps/web exec vitest run src/features/export/exportPng.test.ts && cd services/api && uv run pytest tests/test_exports.py -v`；expected **PASS**. Also run relevant regression suite.
-- [ ] **Step 5: Commit** — `git add apps/web/src/features/export services/api/app/models/exports.py services/api/app/api/exports.py services/api/tests/test_exports.py && git commit -m "feat(export): generate PNG manga pages"`.
+- [x] **Step 1: Write the failing test** — 覆盖原始页面尺寸、品牌版本传入、无缺失素材占位导出、多页顺序、ZIP 页序与精确 revision 绑定，以及页数/尺寸不匹配拒绝。
+- [x] **Step 2: Verify RED** — 新 API 路由实现前返回 404；前端导出模块实现前测试因 `exportPng` 不存在而失败，均为预期功能缺失。
+- [x] **Step 3: Implement minimally** — 复用 Konva 的品牌和画格图层逐页渲染原始尺寸 PNG，不渲染网格/安全区；验证素材加载、像素和尺寸；服务端按 revision 校验并生成有序 ZIP，保存 SHA-256 Blob 与导出记录。
+- [x] **Step 4: Verify GREEN** — 导出 API 专项 3 passed；完整后端 `uv run --project services/api pytest -q`（80 passed）；完整前端 `pnpm --filter @ip-studio/web test`（52 passed）；Contracts 专项 8 passed；Vite/TypeScript build 成功；SQLite Alembic 全生命周期与 `alembic check` 通过；`git diff --check` 通过。
+- [x] **Step 5: Commit** — `feat(export): generate PNG manga pages`。
 
 
 ### Task 2: 工程 ZIP 备份/恢复与完整性校验
