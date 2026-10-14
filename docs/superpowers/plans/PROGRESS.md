@@ -16,9 +16,18 @@
 ### 后续任务
 
 - [x] Task 2：Workspace / IP / Series / Episode 数据与 API
-- [ ] Task 3：安全上传 / Blob 去重 / AssetVersion
+- [x] Task 3：安全上传 / Blob 去重 / AssetVersion
 - [ ] Task 4：Character Bible 与 Style Bible 批准版本
 - [ ] Task 5：多 IP 资产管理页面
+
+#### Task 3 交付记录
+
+- 提交：`feat(assets): add immutable safe image asset registry`
+- RED 证据：初次运行 `uv run --project services/api pytest services/api/tests/test_assets.py -v` 在收集阶段因 `app.models.assets` 尚不存在而失败。
+- 素材验证：该文件 13 passed；完整后端 `uv run --project services/api pytest -v`（19 passed）；前端 `pnpm --filter @ip-studio/web test`（1 passed）及 `pnpm --filter @ip-studio/web build` 成功。
+- 迁移验证：SQLite 上升级到 head、`alembic check`（无新变更）、回滚到 base、再升级，全部通过。
+- 结果：只接受并完整解码 PNG/JPEG/WebP；限制默认 25 MiB/40 MP；按 SHA-256 原子存 Blob 并去重；资产、版本和下载按所属 IP 检查；新版本保留旧版本；删除需显式确认且引用中的版本返回 409，Blob 最后一个版本删除后才清理。
+- 环境限制：Docker daemon 仍未运行，且无本地 PostgreSQL，因此本任务未执行 PostgreSQL 运行时冒烟；数据库路径目前由 SQLite 测试和 Alembic 生命周期验证覆盖。
 
 #### Task 2 交付记录
 

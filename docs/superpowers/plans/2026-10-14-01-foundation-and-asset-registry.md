@@ -75,11 +75,11 @@
 - Consumes: IP/workspace 归属与 DB Session
 - Produces: `put_blob(data: bytes, mime: str) -> StoredBlob`; `create_asset_version(workspace_id: UUID, asset_id: UUID, blob_id: UUID) -> AssetVersion`; POST /api/v1/assets/upload
 
-- [ ] **Step 1: Write the failing test** — `test_reject_fake_png / test_sha256_dedupe / test_cross_ip_denied / test_delete_used_asset_blocked`: 25MB/MIME/魔数/尺寸校验，SHA 一致时底层只一份；不允许删除被引用素材
-- [ ] **Step 2: Run the test to verify RED** — `cd services/api && uv run pytest tests/test_assets.py -v`; expected **FAIL** because the behavior has not been implemented.
-- [ ] **Step 3: Implement the minimal behavior** — 以 hash 存 Blob，数据库引用 AssetVersion；解码真实图片；临时文件原子落盘，失败清理
-- [ ] **Step 4: Run test to verify GREEN** — `cd services/api && uv run pytest tests/test_assets.py -v`; expected **PASS**. Run neighboring regression tests.
-- [ ] **Step 5: Commit** — `git add services/api/app services/api/alembic services/api/tests/test_assets.py && git commit -m "feat(assets): add immutable safe image asset registry"`.
+- [x] **Step 1: Write the failing test** — 覆盖伪造/超大/MIME 不匹配/像素超限、PNG/JPEG/WebP、SHA 去重、跨 IP 隔离、版本读取与删除保护。
+- [x] **Step 2: Run the test to verify RED** — `uv run --project services/api pytest services/api/tests/test_assets.py -v`；实现前因 `app.models.assets` 不存在而收集失败。
+- [x] **Step 3: Implement the minimal behavior** — SHA-256 内容寻址 Blob、PNG/JPEG/WebP 解码、原子写入、IP-scoped 上传/读取/版本/删除以及引用保护。
+- [x] **Step 4: Run test to verify GREEN** — 素材测试 13 passed；完整后端测试 19 passed；前端 Vitest 1 passed、Vite build 成功。Alembic upgrade/check/downgrade/upgrade 通过。
+- [x] **Step 5: Commit** — `feat(assets): add immutable safe image asset registry`。
 
 
 ### Task 4: Character Bible 与 Style Bible 批准版本

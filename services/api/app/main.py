@@ -1,10 +1,12 @@
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import AsyncIterator
 
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.auth import router as auth_router
+from app.api.assets import router as assets_router
 from app.api.ips import router as ips_router
 from app.api.story import router as story_router
 from app.config import Settings
@@ -28,6 +30,7 @@ def create_app(
     bootstrap_admin_email: str | None = None,
     bootstrap_admin_password: str | None = None,
     initialize_schema: bool = False,
+    asset_storage_dir: Path | str | None = None,
 ) -> FastAPI:
     settings = Settings()
     resolved_database_url = database_url or settings.database_url
@@ -54,6 +57,9 @@ def create_app(
     application = FastAPI(title="IP Studio API", version="0.1.0", lifespan=lifespan)
     application.state.engine = engine
     application.state.session_factory = session_factory
+    application.state.asset_storage_dir = Path(asset_storage_dir or settings.asset_storage_dir).resolve()
+    application.state.asset_max_bytes = settings.asset_max_bytes
+    application.state.asset_max_pixels = settings.asset_max_pixels
     configured_secret = jwt_secret_key if jwt_secret_key is not None else settings.jwt_secret_key
     application.state.jwt_secret_key = configured_secret if is_valid_jwt_secret(configured_secret) else None
     allowed_origins = [origin.strip() for origin in settings.web_allowed_origins.split(",") if origin.strip()]
@@ -66,6 +72,7 @@ def create_app(
     )
     application.include_router(health_router)
     application.include_router(auth_router)
+    application.include_router(assets_router)
     application.include_router(ips_router)
     application.include_router(story_router)
     return application
