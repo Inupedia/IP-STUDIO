@@ -11,7 +11,7 @@
 - [x] `scripts/verify-v1.sh` 首个后端步骤失败时保留原始非零退出码（故障注入验证退出码 `37`）。
 - [x] 保存 EP02 Playwright 验收截图：[evidence/ep02-editor.png](evidence/ep02-editor.png)。
 - [x] PostgreSQL 17.11 runtime migration upgrade/check/downgrade/upgrade/check，以及真实数据库 + Blob 联合恢复；管理员登录、图片读取和工程 ZIP 重导出均通过，见 AC-18。
-- [ ] GitHub Actions workflow 已配置 PostgreSQL 17 migration 生命周期和 Playwright；本轮尚未运行远端 Actions。
+- [x] GitHub Actions 的 PostgreSQL 17 migration、API 与 Playwright web jobs 已在当前提交通过：[push run](https://github.com/Inupedia/IP-STUDIO/actions/runs/38571567297)、[PR run](https://github.com/Inupedia/IP-STUDIO/actions/runs/38571574764)；GitGuardian Security Checks 通过。
 - [ ] API-owned Codex 原生 ImageGen 探测与候选回流：已真实调用管理员 probe；provider 虽声明支持，但没有成功原生事件/PNG，API 因安全门禁拒绝 run，见 AC-25。OpenAI 当前 ChatGPT-plan App Server 文档也将 Image Generation 列为不支持；在兼容运行时通过同一 E2E 门禁前不得勾选。
 
 ## 阻断规则

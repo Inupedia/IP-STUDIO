@@ -249,4 +249,5 @@
 - 单集与人工生图任务的异步创建期间锁定工作台，并用 episode/panel/revision 身份校验丢弃过期响应；Playwright 请求门闩覆盖等待期间的交互。
 - 修正恢复 Runbook：先停止本地独立 `uvicorn` 进程再停止 PostgreSQL，恢复后明确启动 API；SHA256SUMS 使用与 `shasum -c` 一致的相对路径。
 - RED → GREEN：新增门闩测试在锁定实现前因缺少 `inert` 失败；画布拖动在透明命中层实现前无法使保存按钮变脏。修复后完整运行 `bash scripts/verify-v1.sh`：FastAPI 95 passed、Vitest 73 passed、Playwright Chromium 16 passed、Vite/TypeScript production build 成功；`git diff --check` 通过。
-- 发布状态：Draft PR #1 仍待更新远端 Actions/GitGuardian 结果；AC-25、发布版本验证日志和生产配置检查仍未满足 release gate。
+- 远端验证：当前提交的 push 与 PR 两次 GitHub Actions API/web jobs 均通过，GitGuardian Security Checks 通过；记录见 [发布检查表](../../qa/V1-release-checklist.md)。
+- 发布状态：Draft PR #1 保持待审；AC-25、发布版本验证日志和生产配置检查仍未满足 release gate。
