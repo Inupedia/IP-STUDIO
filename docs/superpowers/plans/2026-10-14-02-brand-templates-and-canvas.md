@@ -57,11 +57,11 @@
 - Consumes: BrandTemplateVersion 和 Episode ID
 - Produces: `get_layout(code: 'four'|'six'|'eight') -> LayoutTemplate`; `apply_layout(page, layout) -> PageDocument`；Page 记录 brand_template_version_id
 
-- [ ] **Step 1: Write the failing test** — `test_four_six_eight_counts / test_layout_preserves_brand_version`: 每种布局画格数正确且不重叠；替换布局不修改品牌
-- [ ] **Step 2: Run the test to verify RED** — `cd services/api && uv run pytest tests/test_layouts.py -v && cd ../../ && pnpm --dir apps/web exec vitest run src/features/templates/LayoutPicker.test.tsx`; expected **FAIL** because the behavior has not been implemented.
-- [ ] **Step 3: Implement the minimal behavior** — 实现可选择且确定性的 panel geometry；提供自定义布局数据格式及页面冻结关联
-- [ ] **Step 4: Run test to verify GREEN** — `cd services/api && uv run pytest tests/test_layouts.py -v && cd ../../ && pnpm --dir apps/web exec vitest run src/features/templates/LayoutPicker.test.tsx`; expected **PASS**. Run neighboring regression tests.
-- [ ] **Step 5: Commit** — `git add packages/contracts/src/layout.ts services/api/app/services/layouts.py apps/web/src/features/templates services/api/tests/test_layouts.py && git commit -m "feat(layout): add four six eight panel layouts"`.
+- [x] **Step 1: Write the failing test** — `test_layouts.py` 覆盖 4/6/8 格数量与不重叠、品牌引用和内容保留、缩减布局不丢内容、自定义布局几何校验；`LayoutPicker.test.tsx` 覆盖选择行为和品牌版本显示。
+- [x] **Step 2: Run the test to verify RED** — 首次运行时 Python 缺少 `app.services.layouts`，Vitest 找不到 `LayoutPicker`，均按预期失败。
+- [x] **Step 3: Implement the minimal behavior** — 前后端实现一致的两列/边距/间距几何、4/6/8 预设与 custom 数据 schema；应用布局保留品牌版本与原有图层，若移除非空画格则拒绝。
+- [x] **Step 4: Run test to verify GREEN** — 专项后端 6 passed；完整后端 `uv run --project services/api pytest -v`（32 passed）；完整前端 Vitest（10 passed）；`pnpm --filter @ip-studio/web build` 成功；`git diff --check` 通过。
+- [x] **Step 5: Commit** — `feat(layout): add four six eight panel layouts`。
 
 
 ### Task 3: CanvasDocument v1 与消息方向协议

@@ -4,7 +4,8 @@
   "type": "module",
   "exports": {
     "./domain": "./src/domain.ts",
-    "./brand": "./src/brand.ts"
+    "./brand": "./src/brand.ts",
+    "./layout": "./src/layout.ts"
   },
   "dependencies": {
     "zod": "^4.6.7"
