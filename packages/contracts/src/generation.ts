@@ -64,8 +64,18 @@ export const GenerationTaskV1Schema = z.object({
   created_at: z.string().min(1),
 }).strict();
 
+export const GenerationCandidateV1Schema = z.object({
+  candidate_id: idSchema,
+  task_id: idSchema,
+  panel_id: idSchema,
+  asset_version_id: idSchema,
+  status: z.enum(['pending_review', 'approved', 'rejected']),
+  created_at: z.string().min(1),
+}).strict();
+
 export type GenerationReferenceV1 = z.infer<typeof GenerationReferenceV1Schema>;
 export type GenerationTaskV1 = z.infer<typeof GenerationTaskV1Schema>;
+export type GenerationCandidateV1 = z.infer<typeof GenerationCandidateV1Schema>;
 
 export interface GenerationTaskCreateV1 {
   script_revision_no: number;

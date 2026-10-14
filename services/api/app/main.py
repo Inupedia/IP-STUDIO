@@ -10,6 +10,7 @@ from app.api.assets import router as assets_router
 from app.api.bibles import router as bibles_router
 from app.api.documents import router as documents_router
 from app.api.generation_tasks import router as generation_tasks_router
+from app.api.generation_candidates import router as generation_candidates_router
 from app.api.ips import router as ips_router
 from app.api.story import router as story_router
 from app.api.scripts import router as scripts_router
@@ -85,6 +86,7 @@ def create_app(
     application.include_router(templates_router)
     application.include_router(documents_router)
     application.include_router(generation_tasks_router)
+    application.include_router(generation_candidates_router)
     return application
 
 

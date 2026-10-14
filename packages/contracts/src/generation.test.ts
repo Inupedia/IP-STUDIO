@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { GenerationTaskV1Schema } from './generation';
+import { GenerationCandidateV1Schema, GenerationTaskV1Schema } from './generation';
 
 const task = {
   task_id: '10000000-0000-4000-8000-000000000001',
@@ -27,5 +27,17 @@ describe('GenerationTaskV1 contract', () => {
 
   it('rejects a task mode that has not been verified as available', () => {
     expect(() => GenerationTaskV1Schema.parse({ ...task, mode: 'codex_native' })).toThrow();
+  });
+
+  it('accepts imported candidates while they remain pending review', () => {
+    const candidate = {
+      candidate_id: '10000000-0000-4000-8000-000000000020',
+      task_id: task.task_id,
+      panel_id: task.panel_id,
+      asset_version_id: '10000000-0000-4000-8000-000000000021',
+      status: 'pending_review',
+      created_at: '2026-10-14T00:00:00Z',
+    };
+    expect(GenerationCandidateV1Schema.parse(candidate)).toEqual(candidate);
   });
 });

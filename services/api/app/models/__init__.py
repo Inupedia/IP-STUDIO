@@ -3,6 +3,7 @@ from app.models.assets import Asset, AssetLink, AssetVersion, Blob
 from app.models.bibles import Character, CharacterVersion, Style, StyleVersion
 from app.models.documents import DocumentRevision, EpisodeDocument
 from app.models.generation import GenerationTask
+from app.models.generation_candidates import GenerationCandidate
 from app.models.ip import IP
 from app.models.story import Episode, Series
 from app.models.scripts import ScriptRevision
@@ -23,6 +24,7 @@ __all__ = [
     "Episode",
     "EpisodeDocument",
     "GenerationTask",
+    "GenerationCandidate",
     "IP",
     "Series",
     "ScriptRevision",

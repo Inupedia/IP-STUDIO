@@ -436,6 +436,13 @@ textarea::placeholder { color: #a2a49d; }
 .generation-reference-chip { display: grid; gap: 4px; max-width: 100%; padding: 9px 11px; border: 1px solid var(--line); border-radius: 8px; background: var(--canvas); color: var(--ink); font-size: 11px; }
 .generation-reference-chip code { color: var(--muted); font-size: 9px; overflow-wrap: anywhere; }
 .generation-task-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.import-asset-dropzone { display: grid; gap: 8px; }
+.import-asset-target { display: grid; justify-items: start; gap: 8px; padding: 18px; border: 1px dashed #abb9a4; border-radius: 10px; background: #f8faf5; }
+.import-asset-target > p, .import-asset-target > span { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
+.import-asset-target > strong { color: var(--ink); font-size: 14px; }
+.import-asset-target-dragging { border-color: var(--accent); background: #edf5e8; }
+.import-asset-select { position: relative; overflow: hidden; }
+.import-asset-select input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
 @media (max-width: 680px) { .script-field-grid { grid-template-columns: 1fr; } .production-section-heading { align-items: flex-start; flex-direction: column; } }
 .editor-status-line { display: flex; justify-content: center; gap: 15px; padding-top: 9px; color: #777c72; font-size: 9px; }
 .editor-properties { min-width: 0; padding: 17px 13px; border-left: 1px solid var(--line); background: #fbfaf7; }

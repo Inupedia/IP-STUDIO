@@ -75,11 +75,11 @@
 - Consumes: Phase 01 安全上传服务和 GenerationTask
 - Produces: `import_candidate(task_id: UUID, asset_version_id: UUID) -> GenerationCandidate`; `pasteClipboardImage(targetPanelId: string, file: File): Promise<AssetVersion>`
 
-- [ ] **Step 1: Write the failing test** — `test_import_candidate_matches_task_ip / ClipboardPaste routes to selected panel`；文件落 candidate 状态；无 active panel 不能默默关联；跨 IP 资产拒绝
-- [ ] **Step 2: Verify RED** — Run `cd services/api && uv run pytest tests/test_candidates.py -v && cd ../../ && pnpm --dir apps/web exec vitest run src/features/production/ImportAssetDropzone.test.tsx`；expected **FAIL** for missing behavior, not missing dependencies.
-- [ ] **Step 3: Implement minimally** — 实现拖拽/选择/粘贴图片上传并绑定任务，失败提示、格式检查及浏览器剪贴板权限反馈
-- [ ] **Step 4: Verify GREEN** — Run `cd services/api && uv run pytest tests/test_candidates.py -v && cd ../../ && pnpm --dir apps/web exec vitest run src/features/production/ImportAssetDropzone.test.tsx`；expected **PASS**. Also run relevant regression suite.
-- [ ] **Step 5: Commit** — `git add services/api/app/services/candidate_assets.py services/api/app/api/generation_candidates.py services/api/tests/test_candidates.py apps/web/src/features/production && git commit -m "feat(production): import ChatGPT output as candidate assets"`.
+- [x] **Step 1: Write the failing test** — `test_import_candidate_matches_task_ip / ClipboardPaste routes to selected panel`；覆盖 candidate 状态、任务画格绑定、重复/跨 IP/未启动任务拒绝、无选中画格不上传及浏览器拖放/粘贴。
+- [x] **Step 2: Verify RED** — API 绑定路由实现前返回 404；前端因 `ImportAssetDropzone` 模块不存在而无法解析导入；均由缺少功能实现触发，无缺失依赖。
+- [x] **Step 3: Implement minimally** — 增加任务候选模型/迁移与 IP-scoped 绑定 API；安全资产上传后绑定候选并创建 `AssetLink` 防止候选素材被误删；实现拖放、选择文件、`Ctrl+V` 和主动读取剪贴板，缺少选中画格、任务不匹配、格式错误或剪贴板权限拒绝时显示反馈，不自动关联默认画格。
+- [x] **Step 4: Verify GREEN** — 专项后端 2 passed、完整后端 47 passed；前端 34 passed、GenerationCandidate 合同 3 passed；Vite/TypeScript build 成功；SQLite `0008_generation_candidates` upgrade、`alembic check`、downgrade base、upgrade head 均通过；`git diff --check` 通过。PostgreSQL runtime smoke test 仍受 Docker/PostgreSQL 本地环境限制。
+- [x] **Step 5: Commit** — `feat(production): import ChatGPT output as candidate assets`。
 
 
 ### Task 4: 候选审核、替换单格与可复用素材

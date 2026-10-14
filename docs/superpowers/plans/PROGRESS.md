@@ -109,7 +109,7 @@
 
 - [x] Task 1：剧本 Revision、场景、分镜持久化
 - [x] Task 2：参考资产打包与无字提示词
-- [ ] Task 3：浏览器拖拽、粘贴与候选入库
+- [x] Task 3：浏览器拖拽、粘贴与候选入库
 - [ ] Task 4：候选审核、替换单格与可复用素材
 
 #### Task 1 交付记录
@@ -129,6 +129,15 @@
 - 迁移验证：SQLite `0007_generation_tasks` upgrade、`alembic check`（无差异）、downgrade base、再次 upgrade，全部通过。
 - 结果：生成任务冻结脚本修订、Panel、精确批准角色/画风/素材版本、提示词和参考元数据；对白文本不会送入提示词；只接受当前可用的 ChatGPT Web 人工模式；跨 IP 和未批准版本返回拒绝；ZIP 只打包冻结的批准图像 Blob，校验 SHA-256 并限制总大小 100 MiB；任务初始为 `prepared`，人工确认后变为 `waiting_manual_generation`。前端提供冻结版本、复制提示词、下载 ZIP 和状态切换任务卡。
 - 限制：PostgreSQL runtime smoke test 因 Docker daemon 未运行且无本地 PostgreSQL 二进制未执行。工作台导航、候选导入和审核继续按阶段 03 后续任务落地。
+
+#### Task 3 交付记录
+
+- 提交：`feat(production): import ChatGPT output as candidate assets`
+- RED 证据：候选 API 实现前返回 404；前端因 `ImportAssetDropzone` 模块缺失而无法解析测试导入。
+- GREEN 与回归：完整后端 `uv run --project services/api pytest -q`（47 passed）；完整前端 `pnpm --filter @ip-studio/web test`（34 passed）；GenerationCandidate Zod 合同 3 passed；`pnpm --filter @ip-studio/web build` 成功；`git diff --check` 通过。
+- 迁移验证：SQLite `0008_generation_candidates` upgrade、`alembic check`（无差异）、downgrade base、再次 upgrade，全部通过。
+- 结果：浏览器可拖放/选择图片、粘贴或通过用户点击触发读取剪贴板；仅接收 PNG/JPEG/WebP 和 25 MiB 内图片；未选画格或当前画格不等于任务冻结 Panel 时不上传、不关联；任务须进入人工生成状态。API 要求候选资产与任务同 workspace/IP、资产版本仍为 candidate；候选绑定到任务冻结的 Panel，任务转为 `asset_imported`，素材通过 `AssetLink` 固定以免误删，重复绑定返回 409。
+- 限制：PostgreSQL runtime smoke test 因本机 Docker daemon 未运行且无 PostgreSQL 二进制未执行；候选审核、接受/拒绝与画格替换属于下一 Task。
 
 ## 阶段 04：Codex ImageGen 集成
 

@@ -15,7 +15,11 @@ import type {
 } from '@ip-studio/contracts/domain';
 import type { CanvasDocumentV1, DocumentReadV1, DocumentRevisionReadV1 } from '@ip-studio/contracts/canvas';
 import type { ScriptMaterializationResultV1, ScriptRevisionReadV1, ScriptV1 } from '@ip-studio/contracts/script';
-import type { GenerationTaskCreateV1, GenerationTaskV1 } from '@ip-studio/contracts/generation';
+import type {
+  GenerationCandidateV1,
+  GenerationTaskCreateV1,
+  GenerationTaskV1,
+} from '@ip-studio/contracts/generation';
 
 const TOKEN_KEY = 'ip-studio-access-token';
 const AUTH_EXPIRED_EVENT = 'ip-studio:auth-expired';
@@ -286,6 +290,13 @@ export const api = {
 
   startManualGeneration(taskId: string): Promise<GenerationTaskV1> {
     return request(`/api/v1/generation-tasks/${taskId}/waiting-manual-generation`, { method: 'POST' });
+  },
+
+  importGenerationCandidate(taskId: string, assetVersionId: string): Promise<GenerationCandidateV1> {
+    return request(`/api/v1/generation-tasks/${taskId}/candidates`, {
+      method: 'POST',
+      body: jsonBody({ asset_version_id: assetVersionId }),
+    });
   },
 
   async getGenerationReferenceBundle(taskId: string): Promise<Blob> {
