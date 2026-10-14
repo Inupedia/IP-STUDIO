@@ -4,6 +4,7 @@ from app.models.bibles import Character, CharacterVersion, Style, StyleVersion
 from app.models.documents import DocumentRevision, EpisodeDocument
 from app.models.generation import GenerationTask
 from app.models.generation_candidates import GenerationCandidate
+from app.models.codex_runs import CodexRun
 from app.models.ip import IP
 from app.models.story import Episode, Series
 from app.models.scripts import ScriptRevision
@@ -25,6 +26,7 @@ __all__ = [
     "EpisodeDocument",
     "GenerationTask",
     "GenerationCandidate",
+    "CodexRun",
     "IP",
     "Series",
     "ScriptRevision",

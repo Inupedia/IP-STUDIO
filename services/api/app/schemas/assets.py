@@ -23,6 +23,14 @@ class AssetStatus(str, Enum):
     ARCHIVED = "archived"
 
 
+class AssetSourceType(str, Enum):
+    CHATGPT_WEB = "chatgpt_web"
+    CODEX_NATIVE = "codex_native"
+    UPLOADED = "uploaded"
+    EDITED_LOCALLY = "edited_locally"
+    OTHER = "other"
+
+
 class AssetUploadRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -33,6 +41,7 @@ class AssetUploadRead(BaseModel):
     type: AssetType
     name: str
     status: AssetStatus
+    source_type: AssetSourceType
     version_no: int
     sha256: str
     mime: str

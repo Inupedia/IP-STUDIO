@@ -34,7 +34,10 @@ class Asset(TimestampMixin, Base):
             "type IN ('character_reference', 'character_pose', 'expression', 'scene', 'background', 'prop', 'composite_panel', 'texture', 'other')",
             name="ck_assets_type",
         ),
-        CheckConstraint("source_type IN ('chatgpt_web', 'uploaded', 'edited_locally', 'other')", name="ck_assets_source_type"),
+        CheckConstraint(
+            "source_type IN ('chatgpt_web', 'codex_native', 'uploaded', 'edited_locally', 'other')",
+            name="ck_assets_source_type",
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(UUID_COLUMN, primary_key=True, default=new_id)

@@ -20,6 +20,7 @@ import type {
   GenerationTaskCreateV1,
   GenerationTaskV1,
 } from '@ip-studio/contracts/generation';
+import type { CodexCapabilityV1, CodexRunV1 } from '@ip-studio/contracts/codex';
 
 const TOKEN_KEY = 'ip-studio-access-token';
 const AUTH_EXPIRED_EVENT = 'ip-studio:auth-expired';
@@ -312,6 +313,26 @@ export const api = {
       method: 'POST',
       body: jsonBody({ review_note: reviewNote }),
     });
+  },
+
+  getCodexCapabilities(): Promise<CodexCapabilityV1> {
+    return request('/api/v1/codex/capabilities');
+  },
+
+  probeCodexCapabilities(): Promise<CodexCapabilityV1> {
+    return request('/api/v1/codex/capabilities/probe', { method: 'POST' });
+  },
+
+  startCodexRun(taskId: string): Promise<CodexRunV1> {
+    return request(`/api/v1/generation-tasks/${taskId}/codex-runs`, { method: 'POST' });
+  },
+
+  getCodexRun(runId: string): Promise<CodexRunV1> {
+    return request(`/api/v1/codex-runs/${runId}`);
+  },
+
+  cancelCodexRun(runId: string): Promise<CodexRunV1> {
+    return request(`/api/v1/codex-runs/${runId}/cancel`, { method: 'POST' });
   },
 
   async getGenerationReferenceBundle(taskId: string): Promise<Blob> {

@@ -31,6 +31,9 @@ class GenerationCandidate(TimestampMixin, Base):
         ),
         UniqueConstraint("asset_version_id", name="uq_generation_candidates_asset_version"),
         UniqueConstraint("id", "workspace_id", name="uq_generation_candidates_id_workspace"),
+        UniqueConstraint(
+            "id", "workspace_id", "task_id", name="uq_generation_candidates_id_workspace_task"
+        ),
         CheckConstraint(
             "status IN ('pending_review', 'approved', 'rejected')",
             name="ck_generation_candidates_status",

@@ -10,6 +10,7 @@ export type AssetType =
   | 'other';
 
 export type VersionStatus = 'candidate' | 'approved' | 'archived';
+export type AssetSourceType = 'chatgpt_web' | 'codex_native' | 'uploaded' | 'edited_locally' | 'other';
 
 export interface IP {
   id: string;
@@ -40,6 +41,7 @@ export interface AssetVersion {
   type: AssetType;
   name: string;
   status: VersionStatus;
+  source_type?: AssetSourceType;
   version_no: number;
   sha256: string;
   mime: 'image/png' | 'image/jpeg' | 'image/webp';

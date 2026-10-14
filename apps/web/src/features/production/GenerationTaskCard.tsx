@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { GenerationTaskV1 } from '@ip-studio/contracts/generation';
+import { CodexStatus } from '../codex/CodexStatus';
 
 export interface GenerationTaskCardProps {
   task: GenerationTaskV1;
@@ -115,6 +116,11 @@ export function GenerationTaskCard({
       </div>
       {message && <p className="production-success" role="status">{message}</p>}
       {error && <p className="form-error" role="alert">{error}</p>}
+      <CodexStatus
+        taskId={task.task_id}
+        canStart={taskStatus === 'prepared' || taskStatus === 'asset_imported'}
+        onCandidateReady={() => setTaskStatus('asset_imported')}
+      />
     </article>
   );
 }

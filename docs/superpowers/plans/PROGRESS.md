@@ -151,7 +151,7 @@
 ## 阶段 04：Codex ImageGen 集成
 
 - [x] Task 1：Codex 环境能力自检 PoC
-- [ ] Task 2：本地任务 Adapter 与图片安全回流
+- [x] Task 2：本地任务 Adapter 与图片安全回流
 - [ ] Task 3：结构化 CanvasPatch 白名单与授权校验
 - [ ] Task 4：用户确认、应用 Patch 与降级体验
 
@@ -163,6 +163,15 @@
 - 真实探测：当前环境 `/opt/homebrew/bin/codex`，版本 `codex-cli 0.162.1`；`codex login status` 有效；stdio App Server 完成初始化并报告 `imageGeneration=true`；本轮一次原生 ImageGen 生成得到 1254×1254 PNG，Pillow 验证与完整解码成功。具体证据记录在 `docs/architecture/codex-capability-matrix.md`。
 - 结果：受管理员保护的 GET 只读查询 Codex 登录与 App Server provider 能力；provider 声明不会单独标为可用；管理员显式 POST 才会运行原生生成探测，检查工具事件、受限临时输出路径、PNG 解码及尺寸/大小，结果只缓存绑定当前 CLI 路径/版本，不会导入项目资产。探测失败时仍保留 ChatGPT Web 人工生成入口。
 - 限制：真实 ImageGen 调用期间出现模型目录与 hosted tool 通道瞬时超时，随后成功；API 每次显式探测若再次遇到此类超时会如实报告不可用。本机 PostgreSQL runtime 限制沿用阶段 01 记录。
+
+#### Task 2 交付记录
+
+- 提交：`feat(codex): execute gated imagegen and import candidates`
+- RED 证据：能力结果安全回流的测试先因 `app.codex.image_result` 和 `app.api.codex_runs` 缺失而失败；输出越界单测在路径校验实现后先通过。
+- GREEN 与回归：Codex run/Adapter 专项 `uv run --project services/api pytest services/api/tests/test_codex_runs.py -v`（6 passed）；完整后端（64 passed）；完整前端（42 passed）；Codex 与 Generation Zod 合同（5 passed）；Vite/TypeScript build 成功；`git diff --check` 通过。
+- 迁移验证：SQLite `0010_codex_runs` upgrade、`alembic check`（无差异）、downgrade base、再次 upgrade 全部通过。
+- 结果：管理员显式启动任务，服务端重新核验通过真实 ImageGen 的 Codex CLI 路径与版本；CLI 通过独立受限临时目录执行，只附加冻结参考包，校验 SHA-256、ZIP 路径、原生 ImageGen 事件、输出路径、PNG/JPEG 魔数、完整解码和大小/像素限制。输出来源记为 `codex_native`，与当前任务原子关联为 `pending_review` 候选；生成失败不推进任务、不创建候选。状态支持排队、运行、候选就绪、失败，具备超时和管理员取消；数据库约束阻止同任务并发 run 和跨任务候选绑定。前端只有 E2E 探测成功后开放本机生图入口，ChatGPT Web 手动生图与导入始终保留。
+- 限制：本任务通过模拟 CLI 子进程事件验证 Adapter，不再次触发真实生图；真实原生 ImageGen 的 CLI/工具/图片能力探测证据沿用 Task 1。PostgreSQL runtime smoke test 仍受本机 Docker/PostgreSQL 服务不可用限制；SQLite migration 生命周期与 API 集成已验证。
 
 ## 阶段 05：导出与验收
 

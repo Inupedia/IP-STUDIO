@@ -16,6 +16,7 @@ from app.api.story import router as story_router
 from app.api.scripts import router as scripts_router
 from app.api.templates import router as templates_router
 from app.api.codex import router as codex_router
+from app.api.codex_runs import router as codex_runs_router
 from app.config import Settings
 from app.db import make_engine, make_session_factory
 from app.models import Base
@@ -65,6 +66,7 @@ def create_app(
     application.state.engine = engine
     application.state.session_factory = session_factory
     application.state.asset_storage_dir = Path(asset_storage_dir or settings.asset_storage_dir).resolve()
+    application.state.codex_job_root = application.state.asset_storage_dir.parent / "codex-jobs"
     application.state.asset_max_bytes = settings.asset_max_bytes
     application.state.asset_max_pixels = settings.asset_max_pixels
     application.state.codex_imagegen_verified_path = None
@@ -91,6 +93,7 @@ def create_app(
     application.include_router(generation_tasks_router)
     application.include_router(generation_candidates_router)
     application.include_router(codex_router)
+    application.include_router(codex_runs_router)
     return application
 
 

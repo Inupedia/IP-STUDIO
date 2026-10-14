@@ -57,11 +57,11 @@
 - Consumes: 能力 PoC、GenerationTask 与 Phase 01 AssetStore
 - Produces: `generate_image(task_id: UUID, inputs: GenerationInputs) -> GenerationCandidate`；`validate_image_result(path: Path, allowed_dir: Path) -> ValidatedImage`
 
-- [ ] **Step 1: Write the failing test** — `test_valid_png_candidate_import / test_no_output_is_failure / test_path_escape_rejected`；仅在能力确认后执行；生成无字图落入专属 job 目录，PNG/JPEG 魔数/像素合法，候选入库需审阅
-- [ ] **Step 2: Verify RED** — Run `cd services/api && uv run pytest tests/test_codex_runs.py -v`；expected **FAIL** for missing behavior, not missing dependencies.
-- [ ] **Step 3: Implement minimally** — 以 App Server/CLI 实际可用路径建立进程适配、事件日志、超时/取消、临时目录和安全文件结果校验；状态 queued/running/candidate_ready/failed
-- [ ] **Step 4: Verify GREEN** — Run `cd services/api && uv run pytest tests/test_codex_runs.py -v`；expected **PASS**. Also run relevant regression suite.
-- [ ] **Step 5: Commit** — `git add services/api/app/codex services/api/app/api/codex_runs.py apps/web/src/features/codex services/api/tests/test_codex_runs.py && git commit -m "feat(codex): execute gated imagegen and import candidates"`.
+- [x] **Step 1: Write the failing test** — 覆盖有效 PNG 待审候选、无输出失败、输出目录越界拒绝、真实原生 ImageGen 事件门槛、运行取消和 Codex 不可用时人工回退。
+- [x] **Step 2: Verify RED** — 测试先因 `app.codex.image_result` 和 `app.api.codex_runs` 缺失而按预期失败，没有依赖缺失导致的假 RED。
+- [x] **Step 3: Implement minimally** — 使用本机 Codex CLI `exec --json --sandbox workspace-write`；只附加校验过的冻结参考包；限定 job 临时目录、PNG/JPEG 魔数与 Pillow 解码、像素/字节上限和成功原生 ImageGen 事件；支持超时、管理员取消与同任务并发锁。结果以 `codex_native` 来源入库并关联待审候选，不自动审批。
+- [x] **Step 4: Verify GREEN** — 专项 API/Adapter `uv run --project services/api pytest services/api/tests/test_codex_runs.py -v`（6 passed）；完整后端（64 passed）；完整前端（42 passed）；Codex + Generation 合同（5 passed）；Vite/TypeScript build 成功；SQLite 0010 migration upgrade、`alembic check`、downgrade base、upgrade head；`git diff --check` 通过。
+- [x] **Step 5: Commit** — `feat(codex): execute gated imagegen and import candidates`。
 
 
 ### Task 3: 结构化 CanvasPatch 白名单与授权校验

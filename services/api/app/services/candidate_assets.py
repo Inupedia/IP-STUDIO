@@ -23,6 +23,9 @@ def import_candidate(
     workspace_id: UUID,
     task_id: UUID,
     asset_version_id: UUID,
+    *,
+    allow_prepared: bool = False,
+    commit: bool = True,
 ) -> GenerationCandidate:
     task = session.scalar(
         select(GenerationTask)
@@ -31,7 +34,10 @@ def import_candidate(
     )
     if task is None:
         raise ResourceNotFound("Generation task not found")
-    if task.status not in {"waiting_manual_generation", "asset_imported"}:
+    allowed_task_statuses = {"waiting_manual_generation", "asset_imported"}
+    if allow_prepared:
+        allowed_task_statuses.add("prepared")
+    if task.status not in allowed_task_statuses:
         raise ResourceConflict("Start the manual generation task before importing its output")
 
     ip_id = session.scalar(
@@ -76,9 +82,11 @@ def import_candidate(
             )
         )
         task.status = "asset_imported"
-        session.commit()
+        if commit:
+            session.commit()
     except IntegrityError as error:
         session.rollback()
         raise ResourceConflict("This asset version is already bound to a generation candidate") from error
-    session.refresh(candidate)
+    if commit:
+        session.refresh(candidate)
     return candidate

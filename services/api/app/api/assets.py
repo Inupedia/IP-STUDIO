@@ -41,6 +41,7 @@ def _to_read(record: AssetRecord) -> AssetUploadRead:
         type=record.asset.type,
         name=record.asset.name,
         status=record.version.status,
+        source_type=record.asset.source_type,
         version_no=record.version.version_no,
         sha256=record.blob.sha256,
         mime=record.blob.mime,

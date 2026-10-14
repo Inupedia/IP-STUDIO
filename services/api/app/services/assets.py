@@ -141,6 +141,7 @@ def _create_asset_records(
     original_filename: str,
     info: ImageInfo,
     blob: Blob,
+    source_type: str = "uploaded",
 ) -> AssetRecord:
     safe_filename = original_filename.replace("\\", "/").rsplit("/", 1)[-1][:200]
     asset = Asset(
@@ -148,7 +149,7 @@ def _create_asset_records(
         owner_ip_id=ip_id,
         type=asset_type,
         name=name.strip(),
-        source_type="uploaded",
+        source_type=source_type,
         rights_note=rights_note.strip() if rights_note and rights_note.strip() else None,
     )
     session.add(asset)
@@ -218,6 +219,8 @@ def upload_asset(
     storage_dir: Path,
     max_bytes: int,
     max_pixels: int,
+    source_type: str = "uploaded",
+    commit: bool = True,
 ) -> AssetRecord:
     _require_ip(session, workspace_id, ip_id)
     normalized_name = name.strip()
@@ -236,14 +239,17 @@ def upload_asset(
         original_filename,
         info,
         blob,
+        source_type,
     )
     try:
-        session.commit()
+        if commit:
+            session.commit()
     except IntegrityError as error:
         session.rollback()
         raise ResourceConflict("Asset could not be created") from error
-    session.refresh(record.asset)
-    session.refresh(record.version)
+    if commit:
+        session.refresh(record.asset)
+        session.refresh(record.version)
     return record
 
 

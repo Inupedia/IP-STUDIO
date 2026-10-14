@@ -48,6 +48,7 @@ describe('GenerationTaskCard', () => {
     fireEvent.click(screen.getByRole('button', { name: '复制提示词' }));
 
     expect(await screen.findByText('提示词已复制')).toBeTruthy();
+    expect(screen.getByRole('button', { name: '我已在 ChatGPT Web 开始生成' })).toBeTruthy();
     expect(writeText).toHaveBeenCalledWith(task.prompt_snapshot.text);
     expect(screen.getByText(/CharacterVersion|卡仔/).textContent).toContain('卡仔');
     expect(screen.getByDisplayValue(task.prompt_snapshot.text)).toBeTruthy();
