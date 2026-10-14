@@ -108,7 +108,7 @@
 ## 阶段 03：剧本分镜与生产
 
 - [x] Task 1：剧本 Revision、场景、分镜持久化
-- [ ] Task 2：参考资产打包与无字提示词
+- [x] Task 2：参考资产打包与无字提示词
 - [ ] Task 3：浏览器拖拽、粘贴与候选入库
 - [ ] Task 4：候选审核、替换单格与可复用素材
 
@@ -120,6 +120,15 @@
 - 迁移验证：SQLite `0006_scripts` upgrade、`alembic check`（无新差异）、downgrade base、upgrade head 均通过。
 - 结果：Episode 剧本修订只追加；Markdown 与结构化场景分开保留；场景/对白/镜头卡保存角色版本、背景素材、镜头动作和无字提示；引用角色/背景必须同 IP 且已批准。对白差异先预览，用户确认后以新文档 revision 同步已有聊天消息/气泡文字；不改图片、品牌和其他图层。前端已提供剧本编辑、分镜卡列表和确认预览组件/API。
 - 限制：生产工作台导航和 Browser/Playwright 演示会在后续任务接入；PostgreSQL runtime smoke test 因当前环境无 Docker daemon / PostgreSQL 二进制未运行，SQLite API 与迁移全生命周期已验证。
+
+#### Task 2 交付记录
+
+- 提交：`feat(production): add generation prompts and reference bundles`
+- RED 证据：后端测试因提示构建服务尚不存在而无法收集；前端测试因 `GenerationTaskCard` 尚不存在而无法解析导入，均由缺少功能实现触发。
+- GREEN 与回归：完整后端 `uv run --project services/api pytest -q`（45 passed）；完整前端 `pnpm --filter @ip-studio/web test`（29 passed）；GenerationTask Zod 合同 2 passed；`pnpm --filter @ip-studio/web build` 成功；`git diff --check` 通过。
+- 迁移验证：SQLite `0007_generation_tasks` upgrade、`alembic check`（无差异）、downgrade base、再次 upgrade，全部通过。
+- 结果：生成任务冻结脚本修订、Panel、精确批准角色/画风/素材版本、提示词和参考元数据；对白文本不会送入提示词；只接受当前可用的 ChatGPT Web 人工模式；跨 IP 和未批准版本返回拒绝；ZIP 只打包冻结的批准图像 Blob，校验 SHA-256 并限制总大小 100 MiB；任务初始为 `prepared`，人工确认后变为 `waiting_manual_generation`。前端提供冻结版本、复制提示词、下载 ZIP 和状态切换任务卡。
+- 限制：PostgreSQL runtime smoke test 因 Docker daemon 未运行且无本地 PostgreSQL 二进制未执行。工作台导航、候选导入和审核继续按阶段 03 后续任务落地。
 
 ## 阶段 04：Codex ImageGen 集成
 

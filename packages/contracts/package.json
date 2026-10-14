@@ -7,7 +7,8 @@
     "./brand": "./src/brand.ts",
     "./layout": "./src/layout.ts",
     "./canvas": "./src/canvas.ts",
-    "./script": "./src/script.ts"
+    "./script": "./src/script.ts",
+    "./generation": "./src/generation.ts"
   },
   "dependencies": {
     "zod": "^4.6.7"

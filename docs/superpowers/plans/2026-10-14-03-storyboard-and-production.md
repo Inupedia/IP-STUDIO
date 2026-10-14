@@ -57,11 +57,11 @@
 - Consumes: 已批准 CharacterVersion / StyleVersion / AssetVersion，Panel 描述
 - Produces: `build_prompt(panel_id: UUID, refs: list[UUID]) -> PromptSnapshot`; `create_reference_bundle(task_id: UUID) -> bytes`; `create_generation_task(episode_id: UUID, mode: str) -> GenerationTask`
 
-- [ ] **Step 1: Write the failing test** — `test_prompt_contains_locked_version_ids_and_no_text / test_references_belong_to_ip`；提示词要求单格、无字、禁止页码/水印，且角色与风格参考真实、IP 范围合法
-- [ ] **Step 2: Verify RED** — Run `cd services/api && uv run pytest tests/test_prompt_builder.py tests/test_generation_tasks.py -v`；expected **FAIL** for missing behavior, not missing dependencies.
-- [ ] **Step 3: Implement minimally** — 生成结构化任务卡，完整引用快照，构建 ZIP 参考包与复制提示词 UI；人工任务状态 prepared/waiting_manual_generation/asset_imported
-- [ ] **Step 4: Verify GREEN** — Run `cd services/api && uv run pytest tests/test_prompt_builder.py tests/test_generation_tasks.py -v`；expected **PASS**. Also run relevant regression suite.
-- [ ] **Step 5: Commit** — `git add services/api/app/services/prompt_builder.py services/api/app/services/reference_bundle.py services/api/app/api/generation_tasks.py apps/web/src/features/production/GenerationTaskCard.tsx services/api/tests && git commit -m "feat(production): add generation prompts and reference bundles"`.
+- [x] **Step 1: Write the failing test** — `test_prompt_contains_locked_version_ids_and_no_text / test_references_belong_to_ip`；覆盖无字约束、对白不泄漏、准确角色/画风版本、ZIP 图片清单、跨 IP/候选版本拒绝和手动任务状态。
+- [x] **Step 2: Verify RED** — 后端测试因 `app.services.prompt_builder` 不存在而无法收集，前端测试因 `GenerationTaskCard` 不存在而无法解析导入；均由缺少实现触发，无缺失依赖。
+- [x] **Step 3: Implement minimally** — 新增 GenerationTask 快照与迁移、批准角色/画风/图片版本和同 IP 校验、无字提示构建、校验 SHA-256 的参考 ZIP、人工任务读取/状态 API、复制提示词和下载参考包任务卡及 Zod 合同。当前仅开放 `chatgpt_web` 人工模式，不探测或调用私有 API。
+- [x] **Step 4: Verify GREEN** — 专项后端 3 passed、完整后端 45 passed；前端 29 passed、GenerationTask 合同 2 passed；Vite/TypeScript build 成功；SQLite `0007_generation_tasks` upgrade、`alembic check`、downgrade base、upgrade head 均通过；`git diff --check` 通过。PostgreSQL runtime smoke test 仍受 Docker/PostgreSQL 本地环境限制。
+- [x] **Step 5: Commit** — `feat(production): add generation prompts and reference bundles`。
 
 
 ### Task 3: 浏览器拖拽、粘贴与候选入库

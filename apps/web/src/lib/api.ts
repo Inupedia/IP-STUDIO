@@ -15,6 +15,7 @@ import type {
 } from '@ip-studio/contracts/domain';
 import type { CanvasDocumentV1, DocumentReadV1, DocumentRevisionReadV1 } from '@ip-studio/contracts/canvas';
 import type { ScriptMaterializationResultV1, ScriptRevisionReadV1, ScriptV1 } from '@ip-studio/contracts/script';
+import type { GenerationTaskCreateV1, GenerationTaskV1 } from '@ip-studio/contracts/generation';
 
 const TOKEN_KEY = 'ip-studio-access-token';
 const AUTH_EXPIRED_EVENT = 'ip-studio:auth-expired';
@@ -270,5 +271,34 @@ export const api = {
         confirm_dialogue_sync: confirmDialogueSync,
       }),
     });
+  },
+
+  createGenerationTask(episodeId: string, payload: GenerationTaskCreateV1): Promise<GenerationTaskV1> {
+    return request(`/api/v1/episodes/${episodeId}/generation-tasks`, {
+      method: 'POST',
+      body: jsonBody(payload),
+    });
+  },
+
+  getGenerationTask(taskId: string): Promise<GenerationTaskV1> {
+    return request(`/api/v1/generation-tasks/${taskId}`);
+  },
+
+  startManualGeneration(taskId: string): Promise<GenerationTaskV1> {
+    return request(`/api/v1/generation-tasks/${taskId}/waiting-manual-generation`, { method: 'POST' });
+  },
+
+  async getGenerationReferenceBundle(taskId: string): Promise<Blob> {
+    const headers = new Headers();
+    if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`);
+    const response = await fetch(
+      `${API_BASE_URL}/api/v1/generation-tasks/${taskId}/reference-bundle`,
+      { headers },
+    );
+    if (!response.ok) {
+      if (response.status === 401) expireAccessToken();
+      throw new ApiError('无法下载生图参考包', response.status);
+    }
+    return response.blob();
   },
 };
