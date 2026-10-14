@@ -92,6 +92,7 @@ def apply_layout(page: dict[str, object], layout: dict[str, object]) -> dict[str
         panels.append({
             **old,
             **geometry,
+            "panel_id": old.get("panel_id", geometry["panel_id"]),
             "elements": old.get("elements", []),
         })
     updated = {

@@ -32,6 +32,7 @@ def test_layout_preserves_brand_version_and_existing_panel_contents() -> None:
     assert updated["brand_template_version_id"] == "brand-v1"
     assert updated["layout_code"] == "six"
     assert len(updated["panels"]) == 6
+    assert [panel["panel_id"] for panel in updated["panels"][:4]] == [f"panel-{index}" for index in range(4)]
     assert updated["panels"][0]["elements"] == [{"id": "el-0"}]
     assert updated["panels"][3]["elements"] == [{"id": "el-3"}]
     assert updated["panels"][4]["elements"] == []
