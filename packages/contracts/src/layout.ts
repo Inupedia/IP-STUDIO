@@ -71,7 +71,7 @@ export function getLayout(code: Exclude<LayoutCode, 'custom'>, width = 1080, hei
   });
 }
 
-export function applyLayout<TPage extends { brand_template_version_id: string; panels?: Array<{ elements?: unknown[]; [key: string]: unknown }> }>(page: TPage, layout: LayoutTemplate): TPage & { layout_code: LayoutCode; width: number; height: number; panels: Array<PanelGeometry & { elements: unknown[] }> } {
+export function applyLayout<TPage extends { brand_template_version_id: string; panels?: Array<{ panel_id?: string; elements?: unknown[]; [key: string]: unknown }> }>(page: TPage, layout: LayoutTemplate): TPage & { layout_code: LayoutCode; width: number; height: number; panels: Array<PanelGeometry & { panel_id: string; elements: unknown[] }> } {
   const validatedLayout = LayoutTemplateSchema.parse(layout);
   const previousPanels = page.panels ?? [];
   if (previousPanels.length > validatedLayout.panels.length
@@ -86,7 +86,10 @@ export function applyLayout<TPage extends { brand_template_version_id: string; p
     panels: validatedLayout.panels.map((geometry, index) => ({
       ...previousPanels[index],
       ...geometry,
+      panel_id: typeof previousPanels[index]?.panel_id === 'string'
+        ? previousPanels[index].panel_id
+        : geometry.panel_id,
       elements: previousPanels[index]?.elements ?? [],
     })),
-  };
+  } as TPage & { layout_code: LayoutCode; width: number; height: number; panels: Array<PanelGeometry & { panel_id: string; elements: unknown[] }> };
 }

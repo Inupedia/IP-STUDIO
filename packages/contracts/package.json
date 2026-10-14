@@ -5,7 +5,8 @@
   "exports": {
     "./domain": "./src/domain.ts",
     "./brand": "./src/brand.ts",
-    "./layout": "./src/layout.ts"
+    "./layout": "./src/layout.ts",
+    "./canvas": "./src/canvas.ts"
   },
   "dependencies": {
     "zod": "^4.6.7"

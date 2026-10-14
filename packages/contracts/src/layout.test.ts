@@ -21,10 +21,11 @@ describe('panel layouts', () => {
   it('keeps the page brand version when changing panel layout', () => {
     const page = {
       brand_template_version_id: 'brand-v1',
-      panels: [{ panel_id: 'old', elements: [{ id: 'text-1' }] }],
+      panels: [{ panel_id: 'stable-panel-id', elements: [{ id: 'text-1' }] }],
     };
     const updated = applyLayout(page, getLayout('six'));
     expect(updated.brand_template_version_id).toBe('brand-v1');
+    expect(updated.panels[0].panel_id).toBe('stable-panel-id');
     expect(updated.panels[0].elements).toEqual([{ id: 'text-1' }]);
     expect(updated.panels).toHaveLength(6);
   });

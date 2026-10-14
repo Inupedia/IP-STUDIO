@@ -93,11 +93,11 @@
 - Consumes: CanvasDocumentV1 + BrandTemplateV1
 - Produces: `ComicEditor({document,brand,onChange})`，品牌背景/前景不可选择，标题内容与 image/text/shape 可交互
 
-- [ ] **Step 1: Write the failing test** — `ComicEditor.test.tsx: logo_not_selectable_and_title_editable`: Logo/页脚不能拖动；标题值可编辑但位置不可动；相同品牌生成相同外框
-- [ ] **Step 2: Run the test to verify RED** — `pnpm --dir apps/web exec vitest run src/features/editor/ComicEditor.test.tsx`; expected **FAIL** because the behavior has not been implemented.
-- [ ] **Step 3: Implement the minimal behavior** — React Konva 分层渲染，画格 clip、画布缩放与 Transformer，设置独立可编辑对象树
-- [ ] **Step 4: Run test to verify GREEN** — `pnpm --dir apps/web exec vitest run src/features/editor/ComicEditor.test.tsx`; expected **PASS**. Run neighboring regression tests.
-- [ ] **Step 5: Commit** — `git add apps/web/src/features/editor && git commit -m "feat(editor): render fixed shell and editable manga canvas"`.
+- [x] **Step 1: Write the failing test** — `ComicEditor.test.tsx` 覆盖 Logo/页脚不能选择拖动、标题通过固定属性槽编辑，以及不同标题下品牌元素坐标完全一致。
+- [x] **Step 2: Run the test to verify RED** — 测试在 `ComicEditor` 尚未实现时因模块不存在而失败；实现后再修正测试清理与节点文本 mock。
+- [x] **Step 3: Implement the minimal behavior** — 使用 React Konva 分层绘制不可交互品牌背景/前景与画格裁切内容；支持图层选择、拖动/缩放/旋转、图片裁切显示、聊天方向、缩放/网格/安全区、页面切换、属性栏和布局选择。
+- [x] **Step 4: Run test to verify GREEN** — 编辑器专项 2 passed；完整前端 15 passed；`pnpm --filter @ip-studio/web build` 和 contracts strict TypeScript check 成功；`git diff --check` 通过。
+- [x] **Step 5: Commit** — `feat(editor): render fixed shell and editable manga canvas`。
 
 
 ### Task 5: 图层编辑、撤销保存、并发冲突

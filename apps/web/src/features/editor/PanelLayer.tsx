@@ -1,0 +1,293 @@
+import { useEffect, useState } from 'react';
+import Konva from 'konva';
+import {
+  Arrow,
+  Ellipse,
+  Group,
+  Image as KonvaImage,
+  Layer,
+  Line,
+  Rect,
+  Text,
+} from 'react-konva';
+import type { CanvasDocumentV1, CanvasElementV1 } from '@ip-studio/contracts/canvas';
+import { resolveMessageSide } from '@ip-studio/contracts/canvas';
+
+type ElementTransform = CanvasElementV1['transform'];
+
+function useImage(source: string | undefined): HTMLImageElement | undefined {
+  const [image, setImage] = useState<HTMLImageElement>();
+  useEffect(() => {
+    if (!source) {
+      setImage(undefined);
+      return;
+    }
+    const loadedImage = new window.Image();
+    loadedImage.onload = () => setImage(loadedImage);
+    loadedImage.onerror = () => setImage(undefined);
+    loadedImage.src = source;
+    return () => {
+      loadedImage.onload = null;
+      loadedImage.onerror = null;
+    };
+  }, [source]);
+  return image;
+}
+
+interface ElementNodeProps {
+  element: CanvasElementV1;
+  assetSources: Record<string, string>;
+  onSelect: (id: string) => void;
+  onTransform: (id: string, transform: ElementTransform) => void;
+}
+
+function ElementNode({ element, assetSources, onSelect, onTransform }: ElementNodeProps) {
+  const assetVersionId = 'asset_version_id' in element ? element.asset_version_id : undefined;
+  const image = useImage(assetVersionId ? assetSources[assetVersionId] : undefined);
+  const transform = element.transform;
+  const draggable = !element.locked;
+  const handleDragEnd = (event: Konva.KonvaEventObject<DragEvent>) => {
+    onTransform(element.id, { ...transform, x: event.target.x(), y: event.target.y() });
+  };
+  const handleTransformEnd = (event: Konva.KonvaEventObject<Event>) => {
+    const node = event.target;
+    const next = {
+      ...transform,
+      x: node.x(),
+      y: node.y(),
+      width: Math.max(1, transform.width * node.scaleX()),
+      height: Math.max(1, transform.height * node.scaleY()),
+      rotation: node.rotation(),
+    };
+    node.scale({ x: 1, y: 1 });
+    onTransform(element.id, next);
+  };
+  const groupProps = {
+    id: element.id,
+    x: transform.x,
+    y: transform.y,
+    width: transform.width,
+    height: transform.height,
+    rotation: transform.rotation,
+    opacity: element.opacity,
+    draggable,
+    listening: true,
+    onClick: () => onSelect(element.id),
+    onTap: () => onSelect(element.id),
+    onDragEnd: handleDragEnd,
+    onTransformEnd: handleTransformEnd,
+  };
+
+  switch (element.type) {
+    case 'image':
+    case 'sticker':
+      return (
+        <Group {...groupProps}>
+          {image ? (
+            <KonvaImage image={image} width={transform.width} height={transform.height} crop={{
+              x: element.type === 'image' ? element.crop.x * image.width : 0,
+              y: element.type === 'image' ? element.crop.y * image.height : 0,
+              width: element.type === 'image' ? element.crop.width * image.width : image.width,
+              height: element.type === 'image' ? element.crop.height * image.height : image.height,
+            }} opacity={element.opacity} listening={false} />
+          ) : (
+            <Rect width={transform.width} height={transform.height} fill="#eeeeea" stroke="#a9ada4" dash={[6, 4]} listening={false} />
+          )}
+        </Group>
+      );
+    case 'text':
+      return (
+        <Group {...groupProps}>
+          <Text
+            width={transform.width}
+            height={transform.height}
+            text={element.props.text}
+            fontFamily={element.props.font_family}
+            fontSize={element.props.font_size}
+            fontStyle={element.props.font_weight >= 600 ? 'bold' : 'normal'}
+            fill={element.props.color}
+            align={element.props.align}
+            lineHeight={element.props.line_height}
+            letterSpacing={element.props.letter_spacing}
+            listening={false}
+          />
+        </Group>
+      );
+    case 'speech_bubble':
+    case 'thought_bubble':
+      return (
+        <Group {...groupProps}>
+          <Rect
+            width={transform.width}
+            height={transform.height}
+            cornerRadius={element.props.shape === 'ellipse' ? transform.height / 2 : 18}
+            fill={element.props.fill}
+            stroke={element.props.stroke}
+            strokeWidth={element.props.stroke_width}
+            listening={false}
+          />
+          <Text
+            x={12}
+            y={10}
+            width={Math.max(1, transform.width - 24)}
+            height={Math.max(1, transform.height - 20)}
+            text={element.props.text}
+            fontFamily={element.props.font_family}
+            fontSize={element.props.font_size}
+            fill="#242923"
+            align="center"
+            verticalAlign="middle"
+            listening={false}
+          />
+        </Group>
+      );
+    case 'chat_message': {
+      const side = element.props.direction_override
+        ?? resolveMessageSide(element.props.sender_id, element.props.self_participant_id);
+      const bubbleWidth = transform.width * 0.86;
+      const bubbleX = side === 'right' ? transform.width - bubbleWidth : 0;
+      const fill = element.props.theme === 'dark'
+        ? (side === 'right' ? '#637d69' : '#444a45')
+        : (side === 'right' ? '#dcebd9' : '#ffffff');
+      return (
+        <Group {...groupProps}>
+          <Rect
+            x={bubbleX}
+            width={bubbleWidth}
+            height={transform.height}
+            cornerRadius={17}
+            fill={fill}
+            stroke="#d8dcd3"
+            strokeWidth={1}
+            listening={false}
+          />
+          <Text
+            x={bubbleX + 13}
+            y={12}
+            width={bubbleWidth - 26}
+            height={transform.height - 42}
+            text={element.props.text}
+            fontSize={24}
+            fill={element.props.theme === 'dark' ? '#fff' : '#242923'}
+            listening={false}
+          />
+          <Text
+            x={bubbleX + 13}
+            y={transform.height - 26}
+            width={bubbleWidth - 26}
+            height={16}
+            text={element.props.sent_at}
+            fontSize={11}
+            fill={element.props.theme === 'dark' ? '#e0e2de' : '#73796f'}
+            align={side === 'right' ? 'right' : 'left'}
+            listening={false}
+          />
+        </Group>
+      );
+    }
+    case 'shape':
+      if (element.props.shape === 'ellipse') {
+        return (
+          <Group {...groupProps}>
+            <Ellipse
+              x={transform.width / 2}
+              y={transform.height / 2}
+              radiusX={transform.width / 2}
+              radiusY={transform.height / 2}
+              fill={element.props.fill ?? 'transparent'}
+              stroke={element.props.stroke}
+              strokeWidth={element.props.stroke_width}
+              listening={false}
+            />
+          </Group>
+        );
+      }
+      if (element.props.shape === 'line' || element.props.shape === 'arrow') {
+        const ShapeComponent = element.props.shape === 'arrow' ? Arrow : Line;
+        return (
+          <Group {...groupProps}>
+            <ShapeComponent
+              points={[0, 0, transform.width, transform.height]}
+              stroke={element.props.stroke}
+              strokeWidth={element.props.stroke_width}
+              fill={element.props.fill ?? undefined}
+              listening={false}
+            />
+          </Group>
+        );
+      }
+      return (
+        <Group {...groupProps}>
+          <Rect
+            width={transform.width}
+            height={transform.height}
+            cornerRadius={element.props.shape === 'rounded_rectangle' ? 12 : 0}
+            fill={element.props.fill ?? 'transparent'}
+            stroke={element.props.stroke}
+            strokeWidth={element.props.stroke_width}
+            listening={false}
+          />
+        </Group>
+      );
+    case 'panel_frame':
+      return (
+        <Group {...groupProps}>
+          <Rect
+            width={transform.width}
+            height={transform.height}
+            fill={element.props.fill ?? 'transparent'}
+            stroke={element.props.stroke}
+            strokeWidth={element.props.stroke_width}
+            listening={false}
+          />
+        </Group>
+      );
+  }
+}
+
+export function PanelLayer({
+  page,
+  assetSources,
+  onSelect,
+  onTransform,
+}: {
+  page: CanvasDocumentV1['pages'][number];
+  assetSources: Record<string, string>;
+  onSelect: (id: string) => void;
+  onTransform: (id: string, transform: ElementTransform) => void;
+}) {
+  return (
+    <Layer id="panel-content-layer">
+      {page.panels.map((panel) => (
+        <Group
+          key={panel.id}
+          id={`panel-${panel.id}`}
+          x={panel.rect.x}
+          y={panel.rect.y}
+          clipX={0}
+          clipY={0}
+          clipWidth={panel.rect.width}
+          clipHeight={panel.rect.height}
+        >
+          <Rect
+            width={panel.rect.width}
+            height={panel.rect.height}
+            fill="#fffefa"
+            stroke="#4d514a"
+            strokeWidth={2}
+            listening={false}
+          />
+          {[...panel.elements].sort((first, second) => first.z_index - second.z_index).map((element) => (
+            <ElementNode
+              key={element.id}
+              element={element}
+              assetSources={assetSources}
+              onSelect={onSelect}
+              onTransform={onTransform}
+            />
+          ))}
+        </Group>
+      ))}
+    </Layer>
+  );
+}

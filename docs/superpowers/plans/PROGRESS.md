@@ -60,7 +60,7 @@
 - [x] Task 1：品牌模板的数据约束与批准冻结
 - [x] Task 2：4/6/8 格布局与页面继承
 - [x] Task 3：CanvasDocument v1 与消息方向协议
-- [ ] Task 4：画布品牌层及独立内容图层
+- [x] Task 4：画布品牌层及独立内容图层
 - [ ] Task 5：图层编辑、撤销保存、并发冲突
 
 #### Task 1 交付记录
@@ -86,6 +86,14 @@
 - GREEN 与回归：Canvas TS 3 passed、Python 3 passed；完整前端 13 passed、完整后端 35 passed；contracts strict TypeScript check 与前端 build 成功。
 - 结果：共享 fixture 确定 schema_version 1.0、IP Studio UUID 资产/版本引用、标题动态字段、每页冻结品牌版本、元素 transform/crop 和 snake_case 字段；消息方向由 sender 与 self participant 相等性派生。
 - 限制：此任务负责静态结构验证；资产 UUID 是否真实存在及是否归属当前 IP 将在服务端保存任务中二次校验。
+
+#### Task 4 交付记录
+
+- 提交：`feat(editor): render fixed shell and editable manga canvas`
+- RED 证据：新增编辑器测试在 `ComicEditor` 尚未实现时因模块导入失败。
+- GREEN 与回归：编辑器专项 2 passed；完整前端 15 passed；Vite build 与 contracts strict TypeScript check 成功。后端当前回归为 35 passed。
+- 结果：品牌静态层不可选/不可拖动；标题和 EP 编号仅能在属性栏改文字；相同品牌配置重复渲染固定坐标；画格内容独立 Konva 节点并按 z_index 排序，画格容器剪裁；支持图片、原生文字、气泡、聊天消息、形状、贴纸、旋转/缩放/拖动、网格/安全区和页面切换。缩减布局将丢内容时显示错误并拒绝修改。
+- 限制：组件现可由 Episode 工作台消费；Episode 文档加载/保存及撤销命令在 Task 5/阶段 03 接入。
 
 ## 阶段 03：剧本分镜与生产
 
