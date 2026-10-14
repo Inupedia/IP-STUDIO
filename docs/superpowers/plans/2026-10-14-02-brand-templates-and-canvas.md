@@ -75,11 +75,11 @@
 - Consumes: Brand/布局协议和 AssetVersion 引用
 - Produces: `parseCanvasDocument(input: unknown): CanvasDocumentV1`; `resolveMessageSide(senderId: string, selfId: string): 'left'|'right'`；Python Pydantic 同名网络字段
 
-- [ ] **Step 1: Write the failing test** — `canvas.test.ts: requires_brand_template_version / sender_direction_is_deterministic`: schema_version=1.0；卡仔回复右侧，朋友左侧；错误资产引用被拒
-- [ ] **Step 2: Run the test to verify RED** — `pnpm --dir apps/web exec vitest run ../../packages/contracts/src/canvas.test.ts && cd ../../ && cd services/api && uv run pytest tests/test_canvas_contract.py -v`; expected **FAIL** because the behavior has not been implemented.
-- [ ] **Step 3: Implement the minimal behavior** — 实现类型、fixtures、交叉语言校验和迁移预留；Zod/后端字段一致
-- [ ] **Step 4: Run test to verify GREEN** — `pnpm --dir apps/web exec vitest run ../../packages/contracts/src/canvas.test.ts && cd ../../ && cd services/api && uv run pytest tests/test_canvas_contract.py -v`; expected **PASS**. Run neighboring regression tests.
-- [ ] **Step 5: Commit** — `git add packages/contracts services/api/app/schemas/canvas.py services/api/tests/test_canvas_contract.py && git commit -m "feat(editor): specify editable canvas document v1"`.
+- [x] **Step 1: Write the failing test** — 共享 fixture 与 TS/Python 测试覆盖必需品牌版本、snake_case、非法 asset version UUID 和 EP01 左右消息派生。
+- [x] **Step 2: Run the test to verify RED** — Vitest 因 `./canvas` 缺失而导入失败；pytest 因 `app.schemas.canvas` 不存在而收集失败。
+- [x] **Step 3: Implement the minimal behavior** — 实现 1.0 文档、页面、画格、8 种元素及严格字段 schema；图片裁切 0–1 约束、画格边界、每页品牌版本一致性、消息方向函数和共享 JSON fixture。
+- [x] **Step 4: Run test to verify GREEN** — Canvas 专项 TS 3 passed、Python 3 passed；完整后端 35 passed、完整前端 13 passed；contracts TypeScript strict check 与 Vite build 成功。
+- [x] **Step 5: Commit** — `feat(editor): specify editable canvas document v1`。
 
 
 ### Task 4: 画布品牌层及独立内容图层

@@ -1,0 +1,65 @@
+{
+  "schema_version": "1.0",
+  "episode_id": "00000000-0000-4000-8000-000000000006",
+  "revision": 5,
+  "style_version_id": "00000000-0000-4000-8000-000000000004",
+  "brand_template_version_id": "00000000-0000-4000-8000-000000000005",
+  "dynamic_fields": {
+    "title": "在吗？",
+    "episode_number": "EP.01"
+  },
+  "pages": [
+    {
+      "id": "00000000-0000-4000-8000-000000000007",
+      "width": 1080,
+      "height": 1440,
+      "order": 1,
+      "layout_code": "custom",
+      "brand_template_version_id": "00000000-0000-4000-8000-000000000005",
+      "panels": [
+        {
+          "id": "00000000-0000-4000-8000-000000000008",
+          "rect": { "x": 48, "y": 120, "width": 984, "height": 620 },
+          "elements": [
+            {
+              "id": "00000000-0000-4000-8000-000000000009",
+              "type": "image",
+              "asset_version_id": "00000000-0000-4000-8000-000000000003",
+              "transform": { "x": 0, "y": 0, "width": 984, "height": 620, "rotation": 0 },
+              "crop": { "x": 0, "y": 0, "width": 1, "height": 1 },
+              "opacity": 1,
+              "z_index": 1,
+              "locked": true
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000010",
+              "type": "chat_message",
+              "props": {
+                "self_participant_id": "00000000-0000-4000-8000-000000000001",
+                "sender_id": "00000000-0000-4000-8000-000000000002",
+                "text": "在吗？",
+                "sent_at": "22:17",
+                "theme": "light"
+              },
+              "transform": { "x": 470, "y": 50, "width": 405, "height": 145, "rotation": 0 },
+              "z_index": 5
+            },
+            {
+              "id": "00000000-0000-4000-8000-000000000011",
+              "type": "chat_message",
+              "props": {
+                "self_participant_id": "00000000-0000-4000-8000-000000000001",
+                "sender_id": "00000000-0000-4000-8000-000000000001",
+                "text": "不在。",
+                "sent_at": "22:19",
+                "theme": "light"
+              },
+              "transform": { "x": 470, "y": 220, "width": 405, "height": 145, "rotation": 0 },
+              "z_index": 6
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

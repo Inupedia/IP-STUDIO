@@ -59,7 +59,7 @@
 
 - [x] Task 1：品牌模板的数据约束与批准冻结
 - [x] Task 2：4/6/8 格布局与页面继承
-- [ ] Task 3：CanvasDocument v1 与消息方向协议
+- [x] Task 3：CanvasDocument v1 与消息方向协议
 - [ ] Task 4：画布品牌层及独立内容图层
 - [ ] Task 5：图层编辑、撤销保存、并发冲突
 
@@ -78,6 +78,14 @@
 - GREEN 与回归：布局专项后端 6 passed；完整后端 32 passed；完整前端 10 passed；Vite build 成功。
 - 结果：前后端共享固定两列、48 px 外边距和 24 px 间距；4/6/8 布局可重复计算，custom 几何会校验边界和重叠；应用布局保留 `brand_template_version_id` 与已有图层，缩减后会移除含内容画格时明确拒绝。
 - 风险/限制：布局选择器已具备可复用 UI，尚待 Task 4/5 接入完整 Episode 编辑器。
+
+#### Task 3 交付记录
+
+- 提交：`feat(editor): specify editable canvas document v1`
+- RED 证据：TS 契约测试因 `./canvas` 不存在而解析失败；Python 测试因 `app.schemas.canvas` 不存在而收集失败。
+- GREEN 与回归：Canvas TS 3 passed、Python 3 passed；完整前端 13 passed、完整后端 35 passed；contracts strict TypeScript check 与前端 build 成功。
+- 结果：共享 fixture 确定 schema_version 1.0、IP Studio UUID 资产/版本引用、标题动态字段、每页冻结品牌版本、元素 transform/crop 和 snake_case 字段；消息方向由 sender 与 self participant 相等性派生。
+- 限制：此任务负责静态结构验证；资产 UUID 是否真实存在及是否归属当前 IP 将在服务端保存任务中二次校验。
 
 ## 阶段 03：剧本分镜与生产
 
