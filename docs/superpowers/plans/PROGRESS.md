@@ -18,7 +18,15 @@
 - [x] Task 2：Workspace / IP / Series / Episode 数据与 API
 - [x] Task 3：安全上传 / Blob 去重 / AssetVersion
 - [x] Task 4：Character Bible 与 Style Bible 批准版本
-- [ ] Task 5：多 IP 资产管理页面
+- [x] Task 5：多 IP 资产管理页面
+
+#### Task 5 交付记录
+
+- 提交：`feat(ui): implement IP asset and bible workspace`
+- RED 证据：新增 AssetLibrary 测试后，在组件尚未实现时导入失败；GREEN 测试覆盖 IP 切换隔离、候选状态及审批请求中的 IP/Asset/Version。
+- GREEN 与回归：`pnpm --filter @ip-studio/web test`（2 passed）；`pnpm --filter @ip-studio/web build` 成功；`uv run --project services/api pytest -v`（23 passed）；`git diff --check` 通过。
+- 结果：管理员可登录并维护多个 IP，在当前 IP 内上传、筛选、预览、批准素材；角色与画风完整字段按候选→批准→派生管理，参考只显示同 IP 的已批准素材，版本快照可查看；默认画风只能选同 IP 已批准版本。
+- 风险/限制：本任务覆盖登录、IP、素材和 Bible 工作区；其余模板、画布、分镜、生图与导出按后续计划完成。PostgreSQL 运行时限制见 Task 2–4。
 
 #### Task 4 交付记录
 

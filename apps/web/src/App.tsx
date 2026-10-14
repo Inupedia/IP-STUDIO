@@ -1,30 +1,247 @@
+import { useEffect, useState, type FormEvent } from 'react';
+import type { AdminProfile, IP } from '@ip-studio/contracts/domain';
+import { AssetLibrary } from './features/assets/AssetLibrary';
+import { BibleEditor } from './features/bibles/BibleEditor';
+import { IpList } from './features/ips/IpList';
+import { ApiError, api, authExpiredEvent, getAccessToken, setAccessToken } from './lib/api';
+
+type WorkspaceView = 'assets' | 'bibles';
+
+function Brand() {
+  return (
+    <a className="wordmark" href="/" aria-label="IP Studio 首页">
+      <span className="wordmark-mark" aria-hidden="true">IP</span>
+      <span>STUDIO</span>
+    </a>
+  );
+}
+
+function LoginPanel({ onAuthenticated }: { onAuthenticated: (token: string) => void }) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSubmitting(true);
+    setError('');
+    try {
+      const token = await api.login(email, password);
+      onAuthenticated(token.access_token);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : '登录失败');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <main className="login-layout" aria-labelledby="workspace-title">
+      <section className="login-intro">
+        <p className="eyebrow">原创 IP 创作工作台</p>
+        <h1 id="workspace-title">IP Studio</h1>
+        <p>在一个安静、可追溯的工作区里维护角色、素材与漫画创作规范。</p>
+        <div className="login-note">
+          <span className="login-note-mark" aria-hidden="true">01</span>
+          <span>工作室管理员登录<br />你的项目素材保存在本机配置的数据目录中。</span>
+        </div>
+      </section>
+      <form className="login-card" onSubmit={submit}>
+        <p className="eyebrow">工作室账户</p>
+        <h2>继续工作</h2>
+        <label>
+          管理员邮箱
+          <input
+            autoComplete="username"
+            autoFocus
+            required
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.currentTarget.value)}
+            placeholder="you@example.com"
+          />
+        </label>
+        <label>
+          密码
+          <input
+            autoComplete="current-password"
+            required
+            type="password"
+            value={password}
+            onChange={(event) => setPassword(event.currentTarget.value)}
+            placeholder="输入管理员密码"
+          />
+        </label>
+        {error && <p role="alert" className="form-error">{error}</p>}
+        <button className="button button-primary login-submit" type="submit" disabled={submitting}>
+          {submitting ? '正在验证…' : '登录工作室'}
+        </button>
+        <p className="login-footnote">登录凭据只发送到你配置的 IP Studio API。</p>
+      </form>
+    </main>
+  );
+}
+
 export default function App() {
+  const [token, setToken] = useState<string | null>(() => getAccessToken());
+  const [admin, setAdmin] = useState<AdminProfile | null>(null);
+  const [ips, setIps] = useState<IP[]>([]);
+  const [selectedIpId, setSelectedIpId] = useState('');
+  const [view, setView] = useState<WorkspaceView>('assets');
+  const [loading, setLoading] = useState(Boolean(token));
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const onExpired = () => setToken(null);
+    window.addEventListener(authExpiredEvent, onExpired);
+    return () => window.removeEventListener(authExpiredEvent, onExpired);
+  }, []);
+
+  useEffect(() => {
+    if (!token) {
+      setLoading(false);
+      setAdmin(null);
+      setIps([]);
+      setSelectedIpId('');
+      return;
+    }
+    let active = true;
+    setLoading(true);
+    Promise.all([api.getCurrentAdmin(), api.getIps()])
+      .then(([profile, availableIps]) => {
+        if (!active) return;
+        setAdmin(profile);
+        setIps(availableIps);
+        setSelectedIpId((current) =>
+          availableIps.some((ip) => ip.id === current) ? current : availableIps[0]?.id ?? '',
+        );
+        setError('');
+      })
+      .catch((cause: unknown) => {
+        if (!active) return;
+        if (cause instanceof ApiError && cause.status === 401) {
+          setAccessToken(null);
+          setToken(null);
+          return;
+        }
+        setError(cause instanceof Error ? cause.message : '无法连接到 IP Studio API');
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [token]);
+
+  async function createIp(payload: { code: string; name: string; summary?: string | null }) {
+    const created = await api.createIp(payload);
+    setIps((current) => [...current, created]);
+    setSelectedIpId(created.id);
+  }
+
+  function signOut() {
+    setAccessToken(null);
+    setToken(null);
+    setAdmin(null);
+  }
+
+  function updateDefaultStyle(versionId: string) {
+    setIps((current) => current.map((ip) =>
+      ip.id === selectedIpId ? { ...ip, default_style_version_id: versionId } : ip,
+    ));
+  }
+
+  const selectedIp = ips.find((ip) => ip.id === selectedIpId) ?? null;
+
   return (
     <div className="app-shell">
       <header className="topbar">
-        <a className="wordmark" href="/" aria-label="IP Studio 首页">
-          <span className="wordmark-mark" aria-hidden="true">IP</span>
-          <span>STUDIO</span>
-        </a>
+        <Brand />
         <span className="topbar-context">原创 IP 创作工作台</span>
+        {token && (
+          <div className="topbar-account">
+            {admin && <span className="account-email">{admin.email}</span>}
+            <button className="text-button sign-out" type="button" onClick={signOut}>退出</button>
+          </div>
+        )}
       </header>
 
-      <main className="workspace" aria-labelledby="workspace-title">
-        <section className="welcome-panel">
-          <p className="eyebrow">数字资产 · 漫画创作</p>
-          <h1 id="workspace-title">IP Studio</h1>
-          <p className="welcome-copy">管理原创 IP、角色资产与漫画作品。</p>
-        </section>
+      {!token ? (
+        <LoginPanel onAuthenticated={(nextToken) => setToken(nextToken)} />
+      ) : loading ? (
+        <main className="loading-workspace" role="status">正在打开工作室…</main>
+      ) : (
+        <div className="workspace-layout">
+          <IpList
+            ips={ips}
+            selectedIpId={selectedIpId}
+            onSelect={setSelectedIpId}
+            onCreate={createIp}
+          />
+          <main className="workspace-main" aria-labelledby="workspace-title">
+            <div className="workspace-intro">
+              <div>
+                <p className="eyebrow">内容资产 · 版本管理</p>
+                <h1 id="workspace-title">{selectedIp?.name ?? '开始管理你的 IP'}</h1>
+                <p className="workspace-subtitle">
+                  {selectedIp?.summary || '角色规范和素材版本都属于明确的 IP，不会混在一起。'}
+                </p>
+              </div>
+              <div className="workspace-metadata">
+                <span>工作室</span>
+                <strong>{ips.length} 个 IP</strong>
+              </div>
+            </div>
 
-        <section className="empty-state" aria-labelledby="empty-state-title">
-          <div className="empty-state-rule" aria-hidden="true" />
-          <div>
-            <p className="eyebrow">工作台</p>
-            <h2 id="empty-state-title">从一个 IP 开始</h2>
-            <p>创建 IP 后，可以在这里维护角色与画风版本、管理素材，并继续制作漫画。</p>
-          </div>
-        </section>
-      </main>
+            {error && <p className="inline-error" role="alert">{error}</p>}
+            {selectedIp ? (
+              <>
+                <div className="workspace-tabs" role="tablist" aria-label="工作区">
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={view === 'assets'}
+                    className={view === 'assets' ? 'is-active' : ''}
+                    onClick={() => setView('assets')}
+                  >
+                    素材库
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={view === 'bibles'}
+                    className={view === 'bibles' ? 'is-active' : ''}
+                    onClick={() => setView('bibles')}
+                  >
+                    角色与画风
+                  </button>
+                </div>
+                {view === 'assets' ? (
+                  <AssetLibrary
+                    api={api}
+                    ips={ips}
+                    selectedIpId={selectedIp.id}
+                    onSelectIp={setSelectedIpId}
+                  />
+                ) : (
+                  <BibleEditor api={api} ip={selectedIp} onDefaultStyleSet={updateDefaultStyle} />
+                )}
+              </>
+            ) : (
+              <section className="first-ip-card">
+                <span className="first-ip-mark" aria-hidden="true">＋</span>
+                <div>
+                  <p className="eyebrow">新的工作室</p>
+                  <h2>从第一个 IP 开始</h2>
+                  <p>先在左侧创建 IP，随后可以导入标准素材并建立角色、画风规范。</p>
+                </div>
+              </section>
+            )}
+          </main>
+        </div>
+      )}
     </div>
   );
 }

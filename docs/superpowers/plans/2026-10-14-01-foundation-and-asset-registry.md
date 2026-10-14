@@ -111,9 +111,9 @@
 - Consumes: 后端 IP/Asset/Bible 接口
 - Produces: `getIps(): Promise<IP[]>`; `uploadAsset(file: File, ipId: string): Promise<AssetVersion>`；可切换 IP 过滤资产与管理 Bible
 
-- [ ] **Step 1: Write the failing test** — `AssetLibrary.test.tsx: filters_are_scoped_by_ip`: 切换 IP 后不展示其他 IP 私有资产；候选批准状态符合响应
-- [ ] **Step 2: Run the test to verify RED** — `pnpm --dir apps/web exec vitest run src/features/assets/AssetLibrary.test.tsx`; expected **FAIL** because the behavior has not been implemented.
-- [ ] **Step 3: Implement the minimal behavior** — 建立 typed fetch、IP 路由、资产上传与查找、角色风格详情和版本审批 UI
-- [ ] **Step 4: Run test to verify GREEN** — `pnpm --dir apps/web exec vitest run src/features/assets/AssetLibrary.test.tsx`; expected **PASS**. Run neighboring regression tests.
-- [ ] **Step 5: Commit** — `git add apps/web/src packages/contracts/src && git commit -m "feat(ui): implement IP asset and bible workspace"`.
+- [x] **Step 1: Write the failing test** — `AssetLibrary.test.tsx: filters_are_scoped_by_ip`: 切换 IP 后不展示其他 IP 私有资产；候选批准状态符合响应，并将正确 IP/Asset/Version 传入审批请求
+- [x] **Step 2: Run the test to verify RED** — 初次运行因 `AssetLibrary` 尚不存在而导入失败；实现后修正断言范围，避免筛选器的“候选”选项造成歧义。
+- [x] **Step 3: Implement the minimal behavior** — 建立 typed fetch、IP 工作区、资产上传/筛选/审批/预览、角色与画风完整 Bible 编辑、不可变版本审批和派生、同 IP 已批准素材引用及默认画风设置
+- [x] **Step 4: Run test to verify GREEN** — `pnpm --filter @ip-studio/web test`（2 passed）；`pnpm --filter @ip-studio/web build` 成功；完整后端 `uv run --project services/api pytest -v`（23 passed）；`git diff --check` 通过。
+- [x] **Step 5: Commit** — `feat(ui): implement IP asset and bible workspace`。
 

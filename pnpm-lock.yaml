@@ -10,6 +10,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@ip-studio/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       react:
         specifier: ^19.3.0
         version: 19.3.0
@@ -44,6 +47,8 @@ importers:
       vitest:
         specifier: ^5.0.4
         version: 5.0.4(jsdom@27.4.0)(vite@8.3.4)
+
+  packages/contracts: {}
 
 packages:
 
