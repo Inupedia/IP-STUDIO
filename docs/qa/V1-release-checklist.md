@@ -12,7 +12,7 @@
 - [x] 保存 EP02 Playwright 验收截图：[evidence/ep02-editor.png](evidence/ep02-editor.png)。
 - [x] PostgreSQL 17.11 runtime migration upgrade/check/downgrade/upgrade/check，以及真实数据库 + Blob 联合恢复；管理员登录、图片读取和工程 ZIP 重导出均通过，见 AC-18。
 - [ ] GitHub Actions workflow 已配置 PostgreSQL 17 migration 生命周期和 Playwright；本轮尚未运行远端 Actions。
-- [ ] API-owned Codex 原生 ImageGen 探测与候选回流：已真实调用管理员 probe；provider 虽声明支持，但没有成功原生事件/PNG，API 因安全门禁拒绝 run，见 AC-25。
+- [ ] API-owned Codex 原生 ImageGen 探测与候选回流：已真实调用管理员 probe；provider 虽声明支持，但没有成功原生事件/PNG，API 因安全门禁拒绝 run，见 AC-25。OpenAI 当前 ChatGPT-plan App Server 文档也将 Image Generation 列为不支持；在兼容运行时通过同一 E2E 门禁前不得勾选。
 
 ## 阻断规则
 
@@ -22,4 +22,4 @@
 - [ ] 对发布版本运行 `bash scripts/verify-v1.sh` 并保存终端日志。
 - [ ] 生产配置不使用 `.env.example` 中的本地测试密码；设置强 JWT secret、HTTPS 反向代理、防火墙和外部备份存储。
 
-**当前结论：V1 功能代码、SQLite/浏览器回归和 PostgreSQL/Blob 恢复演练已完成；发布只被 AC-25 阻断。**
+**当前结论：V1 功能代码、本地自动化回归和 PostgreSQL/Blob 恢复演练已完成；发布门槛仍未全部满足。AC-25 是唯一 `BLOCKED` 验收项，远端 GitHub Actions、发布版本验证日志及生产配置检查仍待完成。**

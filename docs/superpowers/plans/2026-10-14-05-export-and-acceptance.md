@@ -97,7 +97,7 @@
 - [x] **Step 1: Write the failing test** — 新增 `ep01_dialogue_direction_brand_stability_and_pptx / generation_fallback_works`，覆盖 EP01 左“在吗？”右“不在。”、跨期模板一致、定域编辑、保存刷新与 PPTX 独立对象；另覆盖手动生图候选入审。
 - [x] **Step 2: Verify RED** — E2E/验收回归作为新功能验收入口加入；开发期浏览器调试复现窄视口画布落到页栏下方的问题，并确认剧本输入回调会读到旧 React state，随后以修复和浏览器回归验证。
 - [x] **Step 3: Implement minimally** — 接入 Series/Episode/Canvas 工作流、多选/原子组变换、文本溢出提示、手动 ChatGPT 生图候选审核及多格式导出；建立 AC-01～AC-26 验收矩阵，外部 runtime 缺失项明确标 `BLOCKED`。
-- [x] **Step 4: Verify GREEN** — `bash scripts/verify-v1.sh` 全绿：后端 94 passed、前端 66 passed、Playwright 8 passed（包含保存中继续编辑回归）、Vite/TypeScript build 成功；保存 EP02 Playwright 截图。另 AC-18 真实 PostgreSQL + Blob 恢复通过；AC-25 服务端真实探测失败，仍是唯一发布阻断。
+- [x] **Step 4: Verify GREEN** — `bash scripts/verify-v1.sh` 全绿：后端 94 passed、前端 66 passed、Playwright 8 passed（包含保存中继续编辑回归）、Vite/TypeScript build 成功；保存 EP02 Playwright 截图。另 AC-18 真实 PostgreSQL + Blob 恢复通过；AC-25 是验收矩阵唯一 `BLOCKED` 项。远端 GitHub Actions、发布版本验证日志和生产配置检查仍未完成，见发布检查表。
 - [x] **Step 5: Commit** — `git add tests/e2e docs/qa services/api/tests/test_acceptance_smoke.py && git commit -m "test(e2e): verify IP Studio V1 scenarios"`.
 
 

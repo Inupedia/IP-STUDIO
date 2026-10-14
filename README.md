@@ -2,7 +2,7 @@
 
 面向原创漫画 IP 的**数字资产管理、可编辑创作与模板化出版工作台**。
 
-> 状态：V1 计划内功能代码与自动化回归已完成。真实 PostgreSQL + Blob 恢复演练已通过；当前发布只受 IP Studio API-owned Codex ImageGen 探测/候选回流阻断，逐项状态见 [V1 验收矩阵](docs/qa/V1-acceptance-matrix.md)。
+> 状态：V1 计划内功能代码与本地自动化回归已完成，真实 PostgreSQL + Blob 恢复演练已通过。发布门槛仍未全部满足：AC-25 原生 ImageGen 探测/候选回流受阻，远端 GitHub Actions、发布版本验证日志和生产配置检查也待完成；逐项状态见 [V1 发布检查表](docs/qa/V1-release-checklist.md)。
 
 ## V1 定位
 

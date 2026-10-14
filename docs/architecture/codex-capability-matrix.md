@@ -37,6 +37,19 @@ not leave a PNG in the bounded probe directory. The actual generation run was th
 started. Retry only after the local Codex ImageGen runtime is healthy; keep ChatGPT Web manual
 generation available while it is not.
 
+## ChatGPT-plan compatibility finding (2026-10-14)
+
+OpenAI's [Sign in with ChatGPT preview limitations](https://developers.openai.com/siwc/token-sharing-open-source/preview-limitations)
+state that Image Generation is unsupported for ChatGPT-plan usage through the Responses API,
+including requests made through Codex App Server. This is consistent with the API-owned probe
+failing under the current local ChatGPT login, but it is an inference rather than a confirmed
+diagnosis: IP Studio does not inspect credentials or expose the effective provider transport, and
+the CLI probe intentionally discards stderr. The current verified fact remains that this API-owned
+CLI path did not produce a native ImageGen event plus a decodable PNG. Do not clear AC-25 by retrying
+or by using a private endpoint, browser cookie, or developer API credential; a supported local
+runtime must pass the same end-to-end gate, or the product requirement must be revised through the
+design workflow.
+
 IP Studio does not call ChatGPT private endpoints, read browser cookies, or use Plus as a developer
 API key. App Server/CLI authentication stays inside the installed Codex runtime. PostgreSQL
 availability is unrelated to this capability check.

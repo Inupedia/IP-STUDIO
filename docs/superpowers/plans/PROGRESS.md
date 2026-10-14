@@ -235,7 +235,8 @@
 #### Task 5 交付记录
 
 - 提交：本条记录随 release/handoff commit 一同落地。
-- 结果：新增本地安装/启动指南、PostgreSQL + Blob 备份恢复 Runbook、`bash scripts/verify-v1.sh` 统一入口，以及 Playwright Chromium 和 PostgreSQL 17 migration CI。README 从“尚未实现”更新为当前代码与唯一发布阻断状态。
+- 结果：新增本地安装/启动指南、PostgreSQL + Blob 备份恢复 Runbook、`bash scripts/verify-v1.sh` 统一入口，以及 Playwright Chromium 和 PostgreSQL 17 migration CI。README 从“尚未实现”更新为当前代码状态和未完成的发布门槛。
 - GREEN 与回归：验证入口完整运行通过（FastAPI 94、Vitest 66、Playwright 8、production build）；故障注入确认首个后端命令 exit code `37` 原样返回。CI YAML/Compose 配置解析通过；PG 17.11 upgrade/check/downgrade/upgrade/check 与真实数据库/Blob 恢复后登录、图片 byte match、工程 ZIP 再导出通过。
 - 真实能力边界：API 管理员 probe 调用当前 Codex CLI 后没有成功 ImageGen 事件/PNG；重试退出码为 `1`，API 未开放 native run，因此 AC-25 继续 `BLOCKED`。GitHub Actions 远端尚未运行；相关命令已由同一工作树的本地 verifier 和 PG runtime 复演。
-- 状态：交接材料与 CI 配置已落地；Stage05 Task5 / 最终 release gate 仍未完成，等 AC-25 原生探测与待审核候选回流成功后再勾选。
+- 外部兼容性证据：OpenAI 当前 [Sign in with ChatGPT preview limitations](https://developers.openai.com/siwc/token-sharing-open-source/preview-limitations) 将 ChatGPT-plan Codex App Server Responses 路径的 Image Generation 列为不支持。这与 AC-25 失败相符，但没有从 IP Studio 读取认证/transport 状态，因此根因仍标为推断；不通过私有接口、Cookie 或开发者 API 绕过门禁。
+- 状态：交接材料与 CI 配置已落地；Stage05 Task5 / 最终 release gate 仍未完成。除 AC-25 原生探测与待审核候选回流外，远端 GitHub Actions、发布版本验证日志和生产配置检查也待完成。
