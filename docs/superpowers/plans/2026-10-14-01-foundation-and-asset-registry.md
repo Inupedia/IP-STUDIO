@@ -39,11 +39,11 @@
 - Consumes: 空仓库；README、PRD、设计文件
 - Produces: `create_app() -> FastAPI`; GET /api/v1/health -> 200 {status:'ok'}; React 页面显示 IP Studio
 
-- [ ] **Step 1: Write the failing test** — `test_health_ok / App.test.tsx`: TestClient 对健康检查断言 200+status ok；React 检查页面标题存在
-- [ ] **Step 2: Run the test to verify RED** — `cd services/api && uv run pytest tests/test_health.py -v && cd ../../ && pnpm --dir apps/web exec vitest run`; expected **FAIL** because the behavior has not been implemented.
-- [ ] **Step 3: Implement the minimal behavior** — 配置 pnpm/Vite/React、FastAPI/TestClient、PostgreSQL Compose、基础 CI；确保测试命令真实可运行
-- [ ] **Step 4: Run test to verify GREEN** — `cd services/api && uv run pytest tests/test_health.py -v && cd ../../ && pnpm --dir apps/web exec vitest run`; expected **PASS**. Run neighboring regression tests.
-- [ ] **Step 5: Commit** — `git add package.json pnpm-workspace.yaml apps/web services/api compose.yaml .env.example .github/workflows && git commit -m "chore: bootstrap V1 web API and test harness"`.
+- [x] **Step 1: Write the failing test** — `test_health_ok / App.test.tsx`: TestClient 对健康检查断言 200+status ok；React 检查页面标题存在
+- [x] **Step 2: Run the test to verify RED** — `cd services/api && uv run pytest tests/test_health.py -v && cd ../../ && pnpm --dir apps/web exec vitest run`; expected **FAIL** because the behavior has not been implemented.
+- [x] **Step 3: Implement the minimal behavior** — 配置 pnpm/Vite/React、FastAPI/TestClient、PostgreSQL Compose、基础 CI；确保测试命令真实可运行
+- [x] **Step 4: Run test to verify GREEN** — `cd services/api && uv run pytest tests/test_health.py -v && cd ../../ && pnpm --dir apps/web exec vitest run`; expected **PASS**. Run neighboring regression tests.
+- [x] **Step 5: Commit** — `git add package.json pnpm-workspace.yaml apps/web services/api compose.yaml .env.example .github/workflows && git commit -m "chore: bootstrap V1 web API and test harness"`.
 
 
 ### Task 2: Workspace / IP / Series / Episode 数据与 API

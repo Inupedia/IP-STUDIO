@@ -3,10 +3,12 @@ node_modules/
 dist/
 build/
 coverage/
+.vite/
 .playwright/
 playwright-report/
 test-results/
 .venv/
+*.tsbuildinfo
 __pycache__/
 .pytest_cache/
 .ruff_cache/

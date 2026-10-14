@@ -1,0 +1,154 @@
+:root {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", sans-serif;
+  color: #202521;
+  background: #f2f4f1;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  --ink: #202521;
+  --muted: #737b74;
+  --line: #d9ded8;
+  --surface: #fbfcfa;
+  --accent: #b9432e;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100dvh;
+  margin: 0;
+}
+
+button,
+a {
+  color: inherit;
+  font: inherit;
+}
+
+.app-shell {
+  min-height: 100dvh;
+  padding: 0 clamp(20px, 5vw, 72px) 64px;
+}
+
+.topbar {
+  display: flex;
+  min-height: 76px;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--line);
+}
+
+.wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+  text-decoration: none;
+}
+
+.wordmark-mark {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 1px solid var(--ink);
+  border-radius: 9px;
+  font-size: 11px;
+  letter-spacing: -0.08em;
+}
+
+.topbar-context {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.workspace {
+  width: min(100%, 1180px);
+  margin: 0 auto;
+  padding-top: clamp(52px, 9vw, 112px);
+}
+
+.welcome-panel {
+  max-width: 660px;
+}
+
+.eyebrow {
+  margin: 0 0 16px;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+h1,
+h2,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  margin-bottom: 16px;
+  font-size: clamp(38px, 6vw, 64px);
+  font-weight: 650;
+  letter-spacing: -0.055em;
+  line-height: 1.05;
+}
+
+.welcome-copy {
+  margin-bottom: 0;
+  color: #515a53;
+  font-size: clamp(16px, 2vw, 19px);
+  line-height: 1.65;
+}
+
+.empty-state {
+  display: grid;
+  grid-template-columns: 3px minmax(0, 1fr);
+  gap: clamp(20px, 4vw, 48px);
+  max-width: 760px;
+  margin-top: clamp(64px, 10vw, 120px);
+  padding: 28px 0 28px 2px;
+}
+
+.empty-state-rule {
+  border-radius: 99px;
+  background: var(--accent);
+}
+
+.empty-state h2 {
+  margin-bottom: 10px;
+  font-size: 21px;
+  font-weight: 620;
+  letter-spacing: -0.025em;
+}
+
+.empty-state p:last-child {
+  max-width: 50ch;
+  margin-bottom: 0;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.75;
+}
+
+@media (max-width: 600px) {
+  .app-shell {
+    padding-right: 20px;
+    padding-left: 20px;
+  }
+
+  .topbar {
+    min-height: 64px;
+  }
+
+  .topbar-context {
+    font-size: 12px;
+  }
+}
