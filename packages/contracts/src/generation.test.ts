@@ -34,9 +34,21 @@ describe('GenerationTaskV1 contract', () => {
       candidate_id: '10000000-0000-4000-8000-000000000020',
       task_id: task.task_id,
       panel_id: task.panel_id,
+      asset_id: '10000000-0000-4000-8000-000000000022',
       asset_version_id: '10000000-0000-4000-8000-000000000021',
+      asset_name: '候选图片',
+      asset_type: 'composite_panel',
+      version_no: 1,
+      mime: 'image/png',
+      sha256: 'a'.repeat(64),
+      byte_size: 100,
+      width: 3,
+      height: 2,
       status: 'pending_review',
       created_at: '2026-10-14T00:00:00Z',
+      reviewed_at: null,
+      reviewed_by_user_id: null,
+      review_note: null,
     };
     expect(GenerationCandidateV1Schema.parse(candidate)).toEqual(candidate);
   });

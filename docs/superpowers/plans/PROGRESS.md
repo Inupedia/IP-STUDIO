@@ -110,7 +110,7 @@
 - [x] Task 1：剧本 Revision、场景、分镜持久化
 - [x] Task 2：参考资产打包与无字提示词
 - [x] Task 3：浏览器拖拽、粘贴与候选入库
-- [ ] Task 4：候选审核、替换单格与可复用素材
+- [x] Task 4：候选审核、替换单格与可复用素材
 
 #### Task 1 交付记录
 
@@ -138,6 +138,15 @@
 - 迁移验证：SQLite `0008_generation_candidates` upgrade、`alembic check`（无差异）、downgrade base、再次 upgrade，全部通过。
 - 结果：浏览器可拖放/选择图片、粘贴或通过用户点击触发读取剪贴板；仅接收 PNG/JPEG/WebP 和 25 MiB 内图片；未选画格或当前画格不等于任务冻结 Panel 时不上传、不关联；任务须进入人工生成状态。API 要求候选资产与任务同 workspace/IP、资产版本仍为 candidate；候选绑定到任务冻结的 Panel，任务转为 `asset_imported`，素材通过 `AssetLink` 固定以免误删，重复绑定返回 409。
 - 限制：PostgreSQL runtime smoke test 因本机 Docker daemon 未运行且无 PostgreSQL 二进制未执行；候选审核、接受/拒绝与画格替换属于下一 Task。
+
+#### Task 4 交付记录
+
+- 提交：`feat(production): add candidate review and panel replacement`
+- RED 证据：审核路由和前端组件缺失时专项测试按预期失败；补充重复拒绝回归断言后，首次观察到服务异常因路由捕获了另一组异常类而抛出 500，随后统一异常类型并验证返回 409。
+- GREEN 与回归：候选审核后端专项 2 passed；完整后端 `uv run --project services/api pytest -q`（49 passed）；完整前端 `pnpm --filter @ip-studio/web test`（37 passed）；GenerationCandidate 合同测试 3 passed；Vite/TypeScript build 成功；`git diff --check` 通过。
+- 迁移验证：SQLite `0009_candidate_reviews` upgrade、`alembic check`（无差异）、downgrade base、再次 upgrade 全通过。
+- 结果：管理员可在同 IP 候选库查看审核历史、预览、批准并加入可复用素材或填写原因拒绝；审核人、时间与状态一同冻结，重复审核返回 409，拒绝素材归档且不能再次绑定，通用素材审批接口不能绕过候选审核。编辑器替换只对已解锁画格中的目标 image/sticker 发出白名单 `replace_image` 命令，品牌、标题和台词保留原值。整页位图继续标注为不可逐笔拆分的参考图。
+- 限制：PostgreSQL runtime smoke test 因本机 Docker daemon 未运行且无 PostgreSQL 二进制未执行；SQLite API 测试和 Alembic 全生命周期已通过。
 
 ## 阶段 04：Codex ImageGen 集成
 

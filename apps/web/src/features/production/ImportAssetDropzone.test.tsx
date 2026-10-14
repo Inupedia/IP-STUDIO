@@ -47,9 +47,21 @@ const generationCandidate = {
   candidate_id: '10000000-0000-4000-8000-000000000020',
   task_id: task.task_id,
   panel_id: panelId,
+  asset_id: assetVersion.asset_id,
   asset_version_id: assetVersion.asset_version_id,
+  asset_name: assetVersion.name,
+  asset_type: assetVersion.type,
+  version_no: assetVersion.version_no,
+  mime: assetVersion.mime,
+  sha256: assetVersion.sha256,
+  byte_size: assetVersion.byte_size,
+  width: assetVersion.width,
+  height: assetVersion.height,
   status: 'pending_review' as const,
   created_at: '2026-10-14T00:00:00Z',
+  reviewed_at: null,
+  reviewed_by_user_id: null,
+  review_note: null,
 };
 
 function pasteImage(file: File) {

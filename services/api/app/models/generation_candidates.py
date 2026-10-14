@@ -1,6 +1,14 @@
+from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import CheckConstraint, ForeignKeyConstraint, String, UniqueConstraint
+from sqlalchemy import (
+    CheckConstraint,
+    DateTime,
+    ForeignKeyConstraint,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin, UUID_COLUMN, new_id
@@ -27,6 +35,18 @@ class GenerationCandidate(TimestampMixin, Base):
             "status IN ('pending_review', 'approved', 'rejected')",
             name="ck_generation_candidates_status",
         ),
+        CheckConstraint(
+            "(status = 'pending_review' AND reviewed_at IS NULL AND reviewed_by_user_id IS NULL) "
+            "OR (status IN ('approved', 'rejected') AND reviewed_at IS NOT NULL "
+            "AND reviewed_by_user_id IS NOT NULL)",
+            name="ck_generation_candidates_review_metadata",
+        ),
+        ForeignKeyConstraint(
+            ["reviewed_by_user_id", "workspace_id"],
+            ["users.id", "users.workspace_id"],
+            name="fk_generation_candidates_reviewer_workspace",
+            ondelete="RESTRICT",
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(UUID_COLUMN, primary_key=True, default=new_id)
@@ -35,3 +55,6 @@ class GenerationCandidate(TimestampMixin, Base):
     panel_id: Mapped[UUID] = mapped_column(UUID_COLUMN, nullable=False)
     asset_version_id: Mapped[UUID] = mapped_column(UUID_COLUMN, nullable=False)
     status: Mapped[str] = mapped_column(String(24), nullable=False, default="pending_review")
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    reviewed_by_user_id: Mapped[UUID | None] = mapped_column(UUID_COLUMN, nullable=True)
+    review_note: Mapped[str | None] = mapped_column(Text, nullable=True)

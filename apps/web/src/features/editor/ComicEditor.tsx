@@ -11,7 +11,8 @@ import { BrandLayer } from './BrandLayer';
 import { CanvasToolbar } from './CanvasToolbar';
 import { LayoutPicker } from '../templates/LayoutPicker';
 import { PanelLayer } from './PanelLayer';
-import type { CanvasCommand } from './commands';
+import { applyCanvasCommand, type CanvasCommand } from './commands';
+import { ReplacePanelImage } from './ReplacePanelImage';
 
 type PresetLayoutCode = Exclude<LayoutCode, 'custom'>;
 type ElementTransform = CanvasElementV1['transform'];
@@ -99,6 +100,9 @@ export function ComicEditor({
   const transformerRef = useRef<Konva.Transformer | null>(null);
   const page = document.pages.find((candidate) => candidate.id === currentPageId) ?? document.pages[0];
   const selectedElement = findElement(page, selectedElementId);
+  const selectedPanel = page.panels.find((panel) =>
+    panel.elements.some((element) => element.id === selectedElementId),
+  );
   const inlineEditElement = inlineEdit ? findElement(page, inlineEdit.elementId) : null;
   const inlineEditPanel = inlineEdit
     ? page.panels.find((panel) => panel.elements.some((element) => element.id === inlineEdit.elementId)) ?? null
@@ -524,38 +528,19 @@ export function ComicEditor({
                     </label>
                   )}
                   {(selectedElement.type === 'image' || selectedElement.type === 'sticker') && (
-                    <label>
-                      替换素材
-                      <select
-                        aria-label="替换素材"
-                        value={selectedElement.asset_version_id}
-                        onChange={(event) => {
-                          const nextAssetVersionId = event.currentTarget.value;
-                          if (dispatchCommand) {
-                            dispatchCommand({ type: 'replace_image', element_id: selectedElement.id, asset_version_id: nextAssetVersionId });
-                          } else {
-                            updateDocument({
-                              ...document,
-                              pages: document.pages.map((currentPage) => ({
-                                ...currentPage,
-                                panels: currentPage.panels.map((panel) => ({
-                                  ...panel,
-                                  elements: panel.elements.map((element) => element.id === selectedElement.id
-                                    && (element.type === 'image' || element.type === 'sticker')
-                                    ? { ...element, asset_version_id: nextAssetVersionId }
-                                    : element),
-                                })),
-                              })),
-                            });
-                          }
+                    selectedPanel && (
+                      <ReplacePanelImage
+                        document={document}
+                        panelId={selectedPanel.id}
+                        imageElementId={selectedElement.id}
+                        currentAssetVersionId={selectedElement.asset_version_id}
+                        availableAssets={availableAssets}
+                        onReplace={(command) => {
+                          if (dispatchCommand) dispatchCommand(command);
+                          else updateDocument(applyCanvasCommand(document, command));
                         }}
-                      >
-                        <option value={selectedElement.asset_version_id}>当前素材</option>
-                        {availableAssets
-                          .filter((asset) => asset.status === 'approved' && asset.asset_version_id !== selectedElement.asset_version_id)
-                          .map((asset) => <option key={asset.asset_version_id} value={asset.asset_version_id}>{asset.name} · v{asset.version_no}</option>)}
-                      </select>
-                    </label>
+                      />
+                    )
                   )}
                   {selectedElement.type === 'image' && (
                     <div className="crop-controls">

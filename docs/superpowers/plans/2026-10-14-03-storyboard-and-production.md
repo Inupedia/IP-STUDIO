@@ -93,9 +93,9 @@
 - Consumes: GenerationCandidate 和 Phase 02 画布 command
 - Produces: `approve_candidate(candidate_id: UUID) -> AssetVersion`; `replace_panel_image(panel_id: string, assetVersionId: string) -> CanvasCommand`
 
-- [ ] **Step 1: Write the failing test** — `test_rejected_candidate_cannot_bind / replace_image_does_not_modify_chat_or_brand`；被拒绝素材不能用于批准画格；替换只触及选中 image 层，保持模板、标题、台词不变
-- [ ] **Step 2: Verify RED** — Run `cd services/api && uv run pytest tests/test_candidate_review.py -v && cd ../../ && pnpm --dir apps/web exec vitest run src/features/editor/ReplacePanelImage.test.tsx`；expected **FAIL** for missing behavior, not missing dependencies.
-- [ ] **Step 3: Implement minimally** — 候选池、接受/拒绝记录、复用检索与替换当前画格；旧扁平图片只导入为参考 asset
-- [ ] **Step 4: Verify GREEN** — Run `cd services/api && uv run pytest tests/test_candidate_review.py -v && cd ../../ && pnpm --dir apps/web exec vitest run src/features/editor/ReplacePanelImage.test.tsx`；expected **PASS**. Also run relevant regression suite.
-- [ ] **Step 5: Commit** — `git add services/api/app/services/candidate_review.py services/api/tests/test_candidate_review.py apps/web/src/features/production apps/web/src/features/editor && git commit -m "feat(production): add candidate review and panel replacement"`.
+- [x] **Step 1: Write the failing test** — `test_candidate_review.py` 覆盖批准/拒绝、拒绝后禁止重绑、重复拒绝冲突及通用审批绕过；`ReplacePanelImage.test.tsx` 覆盖仅替换目标图片并保持品牌、标题与聊天文字不变。
+- [x] **Step 2: Verify RED** — 新路由/组件缺失时专项测试按预期失败；增加重复拒绝断言后观察到异常类型未映射导致 500，修正后再次通过。
+- [x] **Step 3: Implement minimally** — 新增审核记录与管理员/时间约束、同 IP 候选池 API、批准/拒绝状态机和素材复用；阻止通用素材审批绕过候选审核；画布仅通过 `replace_image` 白名单命令改目标图层。拒绝记录保留，扁平页继续明确为不可拆分的参考位图。
+- [x] **Step 4: Verify GREEN** — 专项后端 2 passed；完整后端 `uv run --project services/api pytest -q`（49 passed）；完整前端 `pnpm --filter @ip-studio/web test`（37 passed）；GenerationCandidate 合同 3 passed；`pnpm --filter @ip-studio/web build` 成功；SQLite `0009_candidate_reviews` upgrade、`alembic check`、downgrade base、upgrade head 全通过；`git diff --check` 通过。
+- [x] **Step 5: Commit** — `feat(production): add candidate review and panel replacement`。
 

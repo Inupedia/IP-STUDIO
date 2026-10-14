@@ -5,7 +5,7 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.models.assets import Asset, AssetVersion
+from app.models.assets import Asset, AssetLink, AssetVersion
 from app.models.bibles import Character, CharacterVersion, Style, StyleVersion
 from app.models.ip import IP
 
@@ -407,6 +407,15 @@ def approve_asset_version(
     asset, version = row
     if version.status != "candidate":
         raise ResourceConflict("Only a candidate asset version can be approved")
+    if session.scalar(
+        select(AssetLink.id)
+        .where(
+            AssetLink.asset_version_id == version.id,
+            AssetLink.owner_type == "generation_candidate",
+        )
+        .limit(1)
+    ) is not None:
+        raise ResourceConflict("Generation task candidates must be approved from candidate review")
     version.status = "approved"
     version.approved_at = datetime.now(timezone.utc)
     version.approved_by_user_id = approver_id

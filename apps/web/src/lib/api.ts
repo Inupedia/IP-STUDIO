@@ -299,6 +299,21 @@ export const api = {
     });
   },
 
+  getGenerationCandidates(ipId: string): Promise<GenerationCandidateV1[]> {
+    return request(`/api/v1/ips/${ipId}/generation-candidates`);
+  },
+
+  approveGenerationCandidate(candidateId: string): Promise<GenerationCandidateV1> {
+    return request(`/api/v1/generation-candidates/${candidateId}/approve`, { method: 'POST' });
+  },
+
+  rejectGenerationCandidate(candidateId: string, reviewNote: string): Promise<GenerationCandidateV1> {
+    return request(`/api/v1/generation-candidates/${candidateId}/reject`, {
+      method: 'POST',
+      body: jsonBody({ review_note: reviewNote }),
+    });
+  },
+
   async getGenerationReferenceBundle(taskId: string): Promise<Blob> {
     const headers = new Headers();
     if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`);

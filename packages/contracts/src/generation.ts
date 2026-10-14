@@ -68,9 +68,21 @@ export const GenerationCandidateV1Schema = z.object({
   candidate_id: idSchema,
   task_id: idSchema,
   panel_id: idSchema,
+  asset_id: idSchema,
   asset_version_id: idSchema,
+  asset_name: z.string(),
+  asset_type: z.string(),
+  version_no: z.number().int().positive(),
+  mime: z.enum(['image/png', 'image/jpeg', 'image/webp']),
+  sha256: z.string().regex(/^[0-9a-f]{64}$/),
+  byte_size: z.number().int().positive(),
+  width: z.number().int().positive(),
+  height: z.number().int().positive(),
   status: z.enum(['pending_review', 'approved', 'rejected']),
   created_at: z.string().min(1),
+  reviewed_at: z.string().nullable(),
+  reviewed_by_user_id: idSchema.nullable(),
+  review_note: z.string().nullable(),
 }).strict();
 
 export type GenerationReferenceV1 = z.infer<typeof GenerationReferenceV1Schema>;
