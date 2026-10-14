@@ -14,7 +14,8 @@ reports `available`.
 | Provider advertises ImageGen | Yes | App Server reported `imageGeneration: true` |
 | Real native ImageGen output | Yes, for this local Codex session | An explicit `codex exec` call invoked native ImageGen, saved a PNG in the Codex-generated output directory, and copied it to `/tmp/ip-studio-imagegen-probe/probe.png` |
 | PNG integrity | Passed | `file` identified PNG; Pillow `Image.verify()` and a full decode succeeded; 1254×1254 RGB, 1,627,707 bytes |
-| IP Studio API-owned administrator probe (2026-10-14) | `unavailable` | An authenticated FastAPI request confirmed `imageGeneration: true`, but the CLI probe did not record a successful native ImageGen event or a bounded PNG; a later retry exited `1`. The API correctly refused to mark the capability available, so no native run or candidate was created. |
+| IP Studio API-owned administrator probe (2026-10-14, PostgreSQL) | `unavailable` | Authenticated FastAPI requests confirmed `imageGeneration: true`, but the CLI did not record a successful native ImageGen event or bounded PNG; one retry exited `1`. The API correctly refused to mark the capability available, so no native run or candidate was created. |
+| Follow-up isolated API probe (2026-10-14, SQLite) | Inconclusive | The authenticated request did not return a report and was manually interrupted. Its temporary directory was cleaned up; no event log or PNG was retained for verification. This attempt changes neither the earlier API result nor AC-25. |
 | ChatGPT Web fallback | Always enabled | Existing manual task, prompt/reference ZIP, and browser upload path remain independent of the Codex probe |
 
 The first CLI attempt was rejected because the temporary directory was outside a trusted Git
@@ -31,11 +32,12 @@ ImageGen event is present and its bounded PNG output passes the normal image dec
 probe output is temporary and is not imported as a project asset. A changed CLI path or version
 invalidates the cached result.
 
-The latest API-owned attempt confirms why the second gate exists: provider advertisement alone is
-not enough. The CLI returned either no recognized native ImageGen event or exit code `1`, and did
-not leave a PNG in the bounded probe directory. The actual generation run was therefore not
-started. Retry only after the local Codex ImageGen runtime is healthy; keep ChatGPT Web manual
-generation available while it is not.
+The concluded PostgreSQL-backed API attempts confirm why the second gate exists: provider
+advertisement alone is not enough. The CLI returned either no recognized native ImageGen event or
+exit code `1`, and the API did not verify a PNG. The actual generation run was therefore not
+started. A later isolated SQLite-backed request was interrupted before a report could be captured;
+it is inconclusive and does not change AC-25. Retry only after the local Codex ImageGen runtime is
+healthy; keep ChatGPT Web manual generation available while it is not.
 
 ## ChatGPT-plan compatibility finding (2026-10-14)
 

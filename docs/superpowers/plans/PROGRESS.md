@@ -237,8 +237,8 @@
 - 提交：本条记录随 release/handoff commit 一同落地。
 - 结果：新增本地安装/启动指南、PostgreSQL + Blob 备份恢复 Runbook、`bash scripts/verify-v1.sh` 统一入口，以及 Playwright Chromium 和 PostgreSQL 17 migration CI。README 从“尚未实现”更新为当前代码状态和未完成的发布门槛。
 - GREEN 与回归：验证入口完整运行通过（FastAPI 94、Vitest 66、Playwright 8、production build）；故障注入确认首个后端命令 exit code `37` 原样返回。CI YAML/Compose 配置解析通过；PG 17.11 upgrade/check/downgrade/upgrade/check 与真实数据库/Blob 恢复后登录、图片 byte match、工程 ZIP 再导出通过。
-- 远端安全扫描 RED/GREEN：Draft PR #1 首次 GitGuardian 检出新增的固定 CI/测试凭据；改为每次测试进程随机生成验收 JWT/password，并将隔离 GitHub runner 的 Postgres 服务切换为 `trust` 且移除 DSN 密码。修复后的完整本地 verifier（94/66/8/build）与 workflow YAML 解析通过；最新 SHA 的远端复扫待运行。
-- 真实能力边界：API 管理员 probe 调用当前 Codex CLI 后没有成功 ImageGen 事件/PNG；重试退出码为 `1`，API 未开放 native run，因此 AC-25 继续 `BLOCKED`。GitHub Actions 远端尚未运行；相关命令已由同一工作树的本地 verifier 和 PG runtime 复演。
+- 远端安全扫描 RED/GREEN：Draft PR #1 首次 GitGuardian 检出新增的固定 CI/测试凭据；改为每次测试进程随机生成验收 JWT/password，并将隔离 GitHub runner 的 Postgres 服务切换为 `trust` 且移除 DSN 密码。修复后的完整本地 verifier（94/66/8/build）与 workflow YAML 解析通过；当前 head `3135003` 的 push/PR API 与 Web jobs、GitGuardian Security Checks 均通过。
+- 真实能力边界：API 管理员 probe 调用当前 Codex CLI 后没有成功 ImageGen 事件/PNG；重试退出码为 `1`，API 未开放 native run，因此 AC-25 继续 `BLOCKED`。本地完整 verifier 与 PostgreSQL runtime 已复演；当前提交的 GitHub Actions/GitGuardian 结果见上条。
 - 外部兼容性证据：OpenAI 当前 [Sign in with ChatGPT preview limitations](https://developers.openai.com/siwc/token-sharing-open-source/preview-limitations) 将 ChatGPT-plan Codex App Server Responses 路径的 Image Generation 列为不支持。这与 AC-25 失败相符，但没有从 IP Studio 读取认证/transport 状态，因此根因仍标为推断；不通过私有接口、Cookie 或开发者 API 绕过门禁。
 - 状态：交接材料与 CI 配置已落地；Stage05 Task5 / 最终 release gate 仍未完成。除 AC-25 原生探测与待审核候选回流外，远端 GitHub Actions、发布版本验证日志和生产配置检查也待完成。
 
@@ -251,3 +251,4 @@
 - RED → GREEN：新增门闩测试在锁定实现前因缺少 `inert` 失败；画布拖动在透明命中层实现前无法使保存按钮变脏。修复后完整运行 `bash scripts/verify-v1.sh`：FastAPI 95 passed、Vitest 73 passed、Playwright Chromium 16 passed、Vite/TypeScript production build 成功；`git diff --check` 通过。
 - 远端验证：当前提交的 push 与 PR 两次 GitHub Actions API/web jobs 均通过，GitGuardian Security Checks 通过；记录见 [发布检查表](../../qa/V1-release-checklist.md)。
 - 发布状态：Draft PR #1 保持待审；AC-25、发布版本验证日志和生产配置检查仍未满足 release gate。
+- 后续探测记录：在临时 SQLite API 实例通过管理员端点发起一次真实探测；请求未返回报告，等待无响应后被人工中断，临时目录已清理且未留存事件/PNG。结果未知，不计入 AC-25 通过或失败证据；此前 PostgreSQL-backed API 探测仍为最后一条已完成结果。
