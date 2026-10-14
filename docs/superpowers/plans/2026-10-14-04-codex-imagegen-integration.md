@@ -93,9 +93,9 @@
 - Consumes: Phase 02 CAS 文档保存 + Task 3 ValidatedPatch
 - Produces: `apply_approved_patch(patch_id: UUID, base_revision: int, approval_id: UUID) -> DocumentRevision`；UI 提交/拒绝 patch
 
-- [ ] **Step 1: Write the failing test** — `test_rejected_patch_has_no_side_effects / test_stale_revision_returns_409 / fallback_action_visible`；审批前不写，拒绝后不变；冲突 409；Codex 不可用时手动导入入口常驻
-- [ ] **Step 2: Verify RED** — Run `cd services/api && uv run pytest tests/test_codex_patch_approval.py -v && cd ../../ && pnpm --dir apps/web exec vitest run src/features/codex/CodexAssistant.test.tsx`；expected **FAIL** for missing behavior, not missing dependencies.
-- [ ] **Step 3: Implement minimally** — 建立 PatchPreview diff、Approve/Reject 审计、原子应用；UI 明确标注条件式生成和不可用原因
-- [ ] **Step 4: Verify GREEN** — Run `cd services/api && uv run pytest tests/test_codex_patch_approval.py -v && cd ../../ && pnpm --dir apps/web exec vitest run src/features/codex/CodexAssistant.test.tsx`；expected **PASS**. Also run relevant regression suite.
-- [ ] **Step 5: Commit** — `git add services/api/app/services/patch_approval.py services/api/app/api/codex_patches.py services/api/tests/test_codex_patch_approval.py apps/web/src/features/codex && git commit -m "feat(codex): approve scoped edits with reliable fallback"`.
+- [x] **Step 1: Write the failing test** — 覆盖拒绝无副作用、过期 revision 返回冲突、不可用时手动编辑始终可用、只在明确批准后写入新 revision。
+- [x] **Step 2: Verify RED** — 专项测试先于实现补齐；后续发现 ImageGen 不支持时未说明只读文字建议，新增 UI 回归测试先失败，确认文案错位。
+- [x] **Step 3: Implement minimally** — 建立 PatchPreview 差异、批准/拒绝审计和原子 CAS 应用；CLI 使用临时工作目录、只读 sandbox、严格输出 schema；界面说明人工批准与 ImageGen/文字建议能力边界。
+- [x] **Step 4: Verify GREEN** — `uv run --project services/api pytest -q`（77 passed）；`pnpm --filter @ip-studio/web test`（48 passed）；Contracts 专项 8 passed；Vite/TypeScript build 成功；SQLite Alembic downgrade base、upgrade head、`alembic check` 均通过；`git diff --check` 通过。
+- [x] **Step 5: Commit** — `feat(codex): approve scoped edits with reliable fallback`。
 

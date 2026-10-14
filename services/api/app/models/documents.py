@@ -26,6 +26,9 @@ class EpisodeDocument(TimestampMixin, Base):
         ),
         UniqueConstraint("episode_id", name="uq_episode_documents_episode"),
         UniqueConstraint("id", "workspace_id", name="uq_episode_documents_id_workspace"),
+        UniqueConstraint(
+            "id", "workspace_id", "episode_id", name="uq_episode_documents_id_workspace_episode"
+        ),
         CheckConstraint("current_revision > 0", name="ck_episode_documents_revision_positive"),
     )
 

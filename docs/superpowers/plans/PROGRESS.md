@@ -153,7 +153,7 @@
 - [x] Task 1：Codex 环境能力自检 PoC
 - [x] Task 2：本地任务 Adapter 与图片安全回流
 - [x] Task 3：结构化 CanvasPatch 白名单与授权校验
-- [ ] Task 4：用户确认、应用 Patch 与降级体验
+- [x] Task 4：用户确认、应用 Patch 与降级体验
 
 #### Task 1 交付记录
 
@@ -180,6 +180,15 @@
 - GREEN 与回归：后端 Patch 专项 8 passed；完整后端 72 passed；完整前端 44 passed；CanvasPatch/Codex/Generation 合同 7 passed；Vite/TypeScript build 和 `git diff --check` 通过。
 - 结果：新增严格的 Pydantic 与 Zod Patch 协议，只有 `set_text`、`set_transform`、`replace_image_asset`、`insert_element`、`remove_element` 五类操作；最多 50 项。校验 workspace/IP/Episode/Document/base revision、元素 ID 和类型、锁定元素/面板框、Transform 数值与同 IP 已批准素材引用。逐项生成隔离的预览副本，验证不改变输入文档，也没有数据库写入路径；任意 SQL、命令、路径或额外字段均无法通过协议解析。
 - 限制：Patch 数据验证已完成；向本机 Codex 请求提案、持久化待审批记录、人工批准/拒绝与 CAS 应用在 Task 4 实现。
+
+#### Task 4 交付记录
+
+- 提交：`feat(codex): approve scoped edits with reliable fallback`
+- RED 证据：新增 UI 回归测试先观察到 ImageGen `unsupported` 时，界面虽开放只读文字建议，却只显示 ImageGen 不支持，无法解释两种能力的区别；修正状态文案后专项 3 passed。
+- GREEN 与回归：`uv run --project services/api pytest -q`（77 passed）；`pnpm --filter @ip-studio/web test`（48 passed）；CanvasPatch/Codex/Generation 合同专项 8 passed；Vite/TypeScript build 成功；`git diff --check` 通过。
+- 迁移验证：SQLite 从当前 head downgrade base、upgrade head，随后 `alembic check` 报告无新变更。
+- 结果：管理员可生成绑定当前 workspace/IP/Episode/Document/revision 的待审批建议，查看操作差异与完整预览；拒绝仅写审核审计，批准时服务端再次验证资源和 base revision，以 CAS 将新文档 revision 与批准记录放入同一事务。Codex CLI 在隔离临时目录以 read-only sandbox 返回严格 schema；CLI/ImageGen 不可用时手动编辑入口常驻。
+- 边界：CLI 提案子进程通过 mock 测试，本轮未在页面触发真实 Patch 生成；本机无 PostgreSQL runtime，迁移使用 SQLite 验证。
 
 ## 阶段 05：导出与验收
 

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { CanvasElementV1Schema, TransformSchema } from './canvas';
+import { CanvasDocumentV1Schema, CanvasElementV1Schema, TransformSchema } from './canvas';
 
 const idSchema = z.uuid();
 
@@ -50,5 +50,25 @@ export const CanvasPatchV1Schema = z.object({
   operations: z.array(CanvasPatchOperationV1Schema).min(1).max(50),
 }).strict();
 
+export const CodexPatchProposalV1Schema = z.object({
+  patch_id: idSchema,
+  approval_id: idSchema,
+  workspace_id: idSchema,
+  ip_id: idSchema,
+  episode_id: idSchema,
+  document_id: idSchema,
+  base_revision: z.number().int().nonnegative(),
+  patch: CanvasPatchV1Schema,
+  preview_document: CanvasDocumentV1Schema,
+  status: z.enum(['pending_approval', 'approved', 'rejected']),
+  created_by_user_id: idSchema,
+  reviewed_by_user_id: idSchema.nullable(),
+  reviewed_at: z.string().nullable(),
+  review_note: z.string().nullable(),
+  applied_revision: z.number().int().positive().nullable(),
+  created_at: z.string().min(1),
+}).strict();
+
 export type CanvasPatchOperationV1 = z.infer<typeof CanvasPatchOperationV1Schema>;
 export type CanvasPatchV1 = z.infer<typeof CanvasPatchV1Schema>;
+export type CodexPatchProposalV1 = z.infer<typeof CodexPatchProposalV1Schema>;

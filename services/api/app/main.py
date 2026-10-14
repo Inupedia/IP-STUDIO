@@ -17,6 +17,7 @@ from app.api.scripts import router as scripts_router
 from app.api.templates import router as templates_router
 from app.api.codex import router as codex_router
 from app.api.codex_runs import router as codex_runs_router
+from app.api.codex_patches import router as codex_patches_router
 from app.config import Settings
 from app.db import make_engine, make_session_factory
 from app.models import Base
@@ -94,6 +95,7 @@ def create_app(
     application.include_router(generation_candidates_router)
     application.include_router(codex_router)
     application.include_router(codex_runs_router)
+    application.include_router(codex_patches_router)
     return application
 
 

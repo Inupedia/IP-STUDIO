@@ -59,3 +59,10 @@ class CanvasPatch(BaseModel):
     base_revision: int = Field(ge=0)
     summary: str = Field(min_length=1, max_length=500)
     operations: list[CanvasPatchOperation] = Field(min_length=1, max_length=50)
+
+
+class PatchDraft(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    summary: str = Field(min_length=1, max_length=500)
+    operations: list[CanvasPatchOperation] = Field(min_length=1, max_length=50)

@@ -21,6 +21,7 @@ import type {
   GenerationTaskV1,
 } from '@ip-studio/contracts/generation';
 import type { CodexCapabilityV1, CodexRunV1 } from '@ip-studio/contracts/codex';
+import type { CodexPatchProposalV1 } from '@ip-studio/contracts/canvas-patch';
 
 const TOKEN_KEY = 'ip-studio-access-token';
 const AUTH_EXPIRED_EVENT = 'ip-studio:auth-expired';
@@ -333,6 +334,35 @@ export const api = {
 
   cancelCodexRun(runId: string): Promise<CodexRunV1> {
     return request(`/api/v1/codex-runs/${runId}/cancel`, { method: 'POST' });
+  },
+
+  getCodexPatchProposals(episodeId: string): Promise<CodexPatchProposalV1[]> {
+    return request(`/api/v1/episodes/${episodeId}/codex-patches`);
+  },
+
+  proposeCodexPatch(episodeId: string, instruction: string): Promise<CodexPatchProposalV1> {
+    return request(`/api/v1/episodes/${episodeId}/codex-patches`, {
+      method: 'POST',
+      body: jsonBody({ instruction }),
+    });
+  },
+
+  approveCodexPatch(
+    patchId: string,
+    baseRevision: number,
+    approvalId: string,
+  ): Promise<CodexPatchProposalV1> {
+    return request(`/api/v1/codex/patches/${patchId}/approve`, {
+      method: 'POST',
+      body: jsonBody({ base_revision: baseRevision, approval_id: approvalId }),
+    });
+  },
+
+  rejectCodexPatch(patchId: string, reviewNote: string): Promise<CodexPatchProposalV1> {
+    return request(`/api/v1/codex/patches/${patchId}/reject`, {
+      method: 'POST',
+      body: jsonBody({ review_note: reviewNote }),
+    });
   },
 
   async getGenerationReferenceBundle(taskId: string): Promise<Blob> {

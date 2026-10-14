@@ -397,7 +397,7 @@ textarea::placeholder { color: #a2a49d; }
 .canvas-stage-transform .konvajs-content { overflow: hidden; }
 .canvas-inline-text-editor { position: absolute; z-index: 3; box-sizing: border-box; resize: none; border: 2px solid var(--accent); border-radius: 3px; outline: none; padding: 8px; background: rgb(255 255 250 / 94%); color: var(--ink); font: inherit; line-height: 1.35; transform-origin: top left; }
 
-.script-editor, .storyboard, .generation-task-card, .candidate-review, .codex-status { display: grid; gap: 18px; padding: 22px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.script-editor, .storyboard, .generation-task-card, .candidate-review, .codex-status, .codex-assistant, .patch-preview { display: grid; gap: 18px; padding: 22px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
 .production-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
 .production-section-heading h2 { margin: 0; font-size: 20px; letter-spacing: -.03em; }
 .script-editor > label, .script-scene-card label { display: grid; gap: 6px; color: var(--muted); font-size: 12px; }

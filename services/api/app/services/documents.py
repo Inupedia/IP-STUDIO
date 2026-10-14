@@ -121,6 +121,8 @@ def save_document(
     base_revision: int,
     payload: dict[str, object],
     note: str | None = None,
+    *,
+    commit: bool = True,
 ) -> tuple[int, dict[str, object]]:
     episode, ip_id = _require_episode(session, workspace_id, episode_id)
     if UUID(str(payload["episode_id"])) != episode.id:
@@ -187,7 +189,10 @@ def save_document(
                 created_at=now,
             )
         )
-        session.commit()
+        if commit:
+            session.commit()
+        else:
+            session.flush()
     except IntegrityError as error:
         session.rollback()
         raise ResourceConflict("Document revision changed; reload the latest version") from error
