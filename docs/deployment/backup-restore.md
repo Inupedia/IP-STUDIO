@@ -12,16 +12,23 @@ backup_dir="backups/$(date -u +%Y%m%dT%H%M%SZ)"
 mkdir -p "$backup_dir"
 docker compose exec -T database pg_dump -U ip_studio -d ip_studio -Fc > "$backup_dir/ip-studio.dump"
 tar -C var -czf "$backup_dir/blobs.tar.gz" blobs
-shasum -a 256 "$backup_dir/ip-studio.dump" "$backup_dir/blobs.tar.gz" > "$backup_dir/SHA256SUMS"
+(
+  cd "$backup_dir"
+  shasum -a 256 ip-studio.dump blobs.tar.gz > SHA256SUMS
+)
 ```
 
 数据库名与用户需和 `.env` / Compose 一致；若修改过默认值，同步调整 `pg_dump` 参数。把整个时间戳目录复制到另一块加密存储，且与生产主机分离。备份包含用户资产，按其敏感度设访问控制和保留期限。
 
 ## 恢复到现有开发实例
 
-1. 先停止 API，避免恢复期间继续写入：
+1. 先停止 API，避免恢复期间继续写入。本地开发指南通过终端 B 单独运行 `uvicorn`；在该终端按 `Ctrl+C`，等日志显示服务关闭并返回 shell 提示符。若目标环境由容器或平台服务托管，先按该环境的方式停止 API，并确认服务已退出。
 
 ```bash
+if curl --connect-timeout 2 --silent --fail http://127.0.0.1:8000/api/v1/health >/dev/null; then
+  echo "API 仍在运行；停止 API 后再恢复。" >&2
+  exit 1
+fi
 docker compose stop database
 ```
 
@@ -48,7 +55,13 @@ mv var/restore-stage/blobs var/blobs
 
 这些命令会清空并重建当前 `ip_studio` 数据库，并将当前 Blob 目录移到带时间戳的回滚目录；它们不会合并数据。确认 dump 可读、存储空间足够且目标实例正确后再执行。
 
-3. 启动 API，验证：
+3. 在终端 B 启动 API：
+
+```bash
+uv run --project services/api uvicorn app.main:app --app-dir services/api --host 127.0.0.1 --port 8000 --reload
+```
+
+等待服务启动后，在仓库根目录验证：
 
 ```bash
 uv run --project services/api alembic -c services/api/alembic.ini current

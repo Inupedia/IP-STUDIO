@@ -78,7 +78,9 @@ describe('CodexAssistant', () => {
     expect(screen.getByRole('button', { name: '生成 Patch 建议' }).hasAttribute('disabled')).toBe(false);
   });
 
-  it('previews a patch and writes a new revision only after explicit approval', async () => {
+  it.each([false, true])(
+    'previews a patch and protects dirty canvas edits (dirty=%s)',
+    async (isCanvasDirty) => {
     const currentDocument = structuredClone(canvasFixture) as unknown as CanvasDocumentV1;
     const previewDocument = structuredClone(currentDocument);
     const message = previewDocument.pages[0].panels[0].elements[1];
@@ -138,12 +140,17 @@ describe('CodexAssistant', () => {
       revision: currentDocument.revision + 1,
       document: previewDocument,
     });
-    const onApplied = vi.fn();
+    let finishApplication!: () => void;
+    const pendingApplication = new Promise<void>((resolve) => { finishApplication = resolve; });
+    const onApplied = vi.fn(() => pendingApplication);
+    const onApplyBusyChange = vi.fn();
     render(
       <CodexAssistant
         episodeId={currentDocument.episode_id}
         currentRevision={currentDocument.revision}
         currentDocument={currentDocument}
+        isCanvasDirty={isCanvasDirty}
+        onApplyBusyChange={onApplyBusyChange}
         onApplied={onApplied}
         onManualEdit={vi.fn()}
       />,
@@ -154,13 +161,31 @@ describe('CodexAssistant', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: '生成 Patch 建议' }));
     expect(await screen.findByText(/在吗？ → 候选对白/)).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: '批准并写入 revision 6' }));
+    const approveButton = screen.getByRole('button', { name: '批准并写入 revision 6' });
+    if (isCanvasDirty) {
+      expect(approveButton.hasAttribute('disabled')).toBe(true);
+      expect(screen.getByText('请先保存画布，再批准这条 Patch 建议。')).toBeTruthy();
+      fireEvent.click(approveButton);
+      expect(api.approveCodexPatch).not.toHaveBeenCalled();
+      expect(onApplied).not.toHaveBeenCalled();
+      expect(onApplyBusyChange).not.toHaveBeenCalled();
+      return;
+    }
+    fireEvent.click(approveButton);
 
     await waitFor(() => expect(api.approveCodexPatch).toHaveBeenCalledWith(
       proposal.patch_id,
       proposal.base_revision,
       proposal.approval_id,
     ));
-    await waitFor(() => expect(onApplied).toHaveBeenCalledWith(previewDocument));
-  });
+    await waitFor(() => expect(onApplied).toHaveBeenCalledWith({
+      ...previewDocument,
+      revision: currentDocument.revision + 1,
+    }));
+    expect(onApplyBusyChange).toHaveBeenNthCalledWith(1, true);
+    expect(onApplyBusyChange).toHaveBeenLastCalledWith(true);
+    finishApplication();
+    await waitFor(() => expect(onApplyBusyChange).toHaveBeenLastCalledWith(false));
+    },
+  );
 });

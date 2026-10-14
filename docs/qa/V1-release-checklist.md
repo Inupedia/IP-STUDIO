@@ -2,9 +2,9 @@
 
 ## 验证结果（2026-10-14）
 
-- [x] 前端 Vitest：25 个文件，66 项通过。
-- [x] Playwright Chromium：8 条端到端流程通过，含 EP01/EP02、ChatGPT Web 手动回退、两个标签页 CAS、保存时继续编辑、10 页 PNG 与 30 图层回归。
-- [x] FastAPI pytest：94 项通过；API 测试数据库为临时 SQLite。
+- [x] 前端 Vitest：26 个文件，73 项通过。
+- [x] Playwright Chromium：16 条端到端流程通过，含 EP01/EP02、ChatGPT Web 手动回退、两个标签页 CAS、保存时继续编辑、异步创建期间锁定工作台、画布真实组拖动、10 页 PNG 与 30 图层回归。
+- [x] FastAPI pytest：95 项通过；API 测试数据库为临时 SQLite。
 - [x] Vite/TypeScript production build 通过；工作台/导出功能按需拆分加载。
 - [x] PNG ZIP 浏览器路径检查 10 张实际渲染页的 1080×1440 尺寸与页序。
 - [x] PPTX 浏览器 XML 验收含多个独立图片/形状/中文文本对象；阶段 Task 3 使用 LibreOffice 打开/转换通过。

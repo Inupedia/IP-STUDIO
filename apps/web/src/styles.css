@@ -491,7 +491,9 @@ textarea::placeholder { color: #a2a49d; }
 .editor-property-fields input { min-height: 34px; font-size: 10px; }
 .layers-heading { margin-top: 15px; }
 .editor-layer-list { display: grid; gap: 3px; }
-.editor-insert-controls { display: flex; gap: 6px; margin: 0 0 7px; }
+.editor-insert-controls { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 7px; }
+.editor-insert-panel-target { display: flex; align-items: center; gap: 5px; color: #526b55; font-size: 9px; white-space: nowrap; }
+.editor-insert-panel-target select { min-height: 28px; max-width: 90px; padding: 0 6px; border: 1px solid #dfe1d8; border-radius: 6px; background: #fff; color: #526b55; font-size: 9px; }
 .editor-insert-controls button { min-height: 28px; padding: 0 8px; border: 1px solid #dfe1d8; border-radius: 6px; background: #fff; color: #526b55; font-size: 9px; }
 .editor-layer-row { display: grid; min-width: 0; grid-template-columns: 21px minmax(0, 1fr) auto; align-items: center; gap: 6px; padding: 6px 5px; border: 1px solid transparent; border-radius: 6px; background: transparent; color: #5e645a; font-size: 9px; text-align: left; }
 .editor-layer-row:hover,

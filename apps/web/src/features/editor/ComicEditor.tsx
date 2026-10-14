@@ -12,12 +12,20 @@ import { CanvasToolbar } from './CanvasToolbar';
 import { LayoutPicker } from '../templates/LayoutPicker';
 import { PanelLayer } from './PanelLayer';
 import { applyCanvasCommand, type CanvasCommand } from './commands';
+import {
+  collectSelectionTransforms,
+  createGroupDragTracker,
+  selectionTransformCommand,
+  trackGroupDragEnd,
+  type GroupDragTracker,
+} from './selectionTransform';
 import { ReplacePanelImage } from './ReplacePanelImage';
 import { ExportPanel } from '../export/ExportPanel';
 import { canvasElementMayOverflowText } from './textOverflow';
 
 type PresetLayoutCode = Exclude<LayoutCode, 'custom'>;
 type ElementTransform = CanvasElementV1['transform'];
+type GroupDragOrigin = { origins: Map<string, ElementTransform>; tracker: GroupDragTracker };
 
 export interface ComicEditorProps {
   document: CanvasDocumentV1;
@@ -92,6 +100,7 @@ export function ComicEditor({
   saveStatus = 'saved',
 }: ComicEditorProps) {
   const [currentPageId, setCurrentPageId] = useState(document.pages[0]?.id ?? '');
+  const [insertionPanelId, setInsertionPanelId] = useState(document.pages[0]?.panels[0]?.id ?? '');
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
   const [selectedElementIds, setSelectedElementIds] = useState<string[]>([]);
   const [groupMoveX, setGroupMoveX] = useState('0');
@@ -103,8 +112,9 @@ export function ComicEditor({
   const [inlineEdit, setInlineEdit] = useState<{ elementId: string; value: string } | null>(null);
   const stageRef = useRef<Konva.Stage | null>(null);
   const transformerRef = useRef<Konva.Transformer | null>(null);
-  const groupDragOrigin = useRef<Map<string, ElementTransform> | null>(null);
+  const groupDragOrigin = useRef<GroupDragOrigin | null>(null);
   const page = document.pages.find((candidate) => candidate.id === currentPageId) ?? document.pages[0];
+  const insertionPanel = page.panels.find((panel) => panel.id === insertionPanelId) ?? page.panels[0];
   const selectedElement = findElement(page, selectedElementId);
   const selectedPanel = page.panels.find((panel) =>
     panel.elements.some((element) => element.id === selectedElementId),
@@ -117,6 +127,12 @@ export function ComicEditor({
     .flatMap((panel) => panel.elements)
     .filter(canvasElementMayOverflowText).length;
   const backgroundElements = brand.locked_elements.filter((element) => element.kind === 'background');
+
+  useEffect(() => {
+    if (!page.panels.some((panel) => panel.id === insertionPanelId)) {
+      setInsertionPanelId(page.panels[0]?.id ?? '');
+    }
+  }, [page, insertionPanelId]);
 
   useEffect(() => {
     const stage = stageRef.current;
@@ -159,17 +175,21 @@ export function ComicEditor({
 
   function updateElementTransform(elementId: string, transform: ElementTransform) {
     const groupStart = groupDragOrigin.current;
-    if (groupStart?.has(elementId)) {
-      const stage = stageRef.current;
-      const transforms = [...groupStart].map(([id, original]) => {
-        const node = stage?.findOne(`#${id}`);
-        return {
-          element_id: id,
-          transform: { ...original, x: node?.x() ?? original.x, y: node?.y() ?? original.y },
-        };
-      });
-      groupDragOrigin.current = null;
-      updateElementTransforms(transforms);
+    if (groupStart?.origins.has(elementId)) {
+      const dragEnd = trackGroupDragEnd(groupStart.tracker, elementId);
+      groupStart.tracker = dragEnd.tracker;
+      if (dragEnd.shouldCommit) {
+        const stage = stageRef.current;
+        const transforms = [...groupStart.origins].map(([id, original]) => {
+          const node = stage?.findOne(`#${id}`);
+          return {
+            element_id: id,
+            transform: { ...original, x: node?.x() ?? original.x, y: node?.y() ?? original.y },
+          };
+        });
+        updateElementTransforms(transforms);
+      }
+      if (dragEnd.finished) groupDragOrigin.current = null;
       return;
     }
     if (dispatchCommand) {
@@ -199,32 +219,46 @@ export function ComicEditor({
     updateDocument(applyCanvasCommand(document, { type: 'set_transforms', transforms }));
   }
 
+  function commitSelectionTransforms() {
+    const nodes = transformerRef.current?.nodes() ?? [];
+    const snapshots = nodes.map((node) => ({
+      element_id: node.id(),
+      x: node.x(),
+      y: node.y(),
+      scaleX: node.scaleX(),
+      scaleY: node.scaleY(),
+      rotation: node.rotation(),
+    }));
+    const elements = page.panels.flatMap((panel) => panel.elements);
+    const transforms = collectSelectionTransforms(elements, snapshots);
+    nodes.forEach((node) => node.scale({ x: 1, y: 1 }));
+    const command = selectionTransformCommand(transforms);
+    if (!command) return;
+    if (dispatchCommand) {
+      dispatchCommand(command);
+      return;
+    }
+    updateDocument(applyCanvasCommand(document, command));
+  }
+
   function beginGroupDrag(elementId: string) {
+    if (groupDragOrigin.current?.origins.has(elementId)) return;
     if (selectedElementIds.length < 2 || !selectedElementIds.includes(elementId)) {
       groupDragOrigin.current = null;
       return;
     }
-    groupDragOrigin.current = new Map(selectedElementIds.flatMap((id) => {
+    const origins = new Map(selectedElementIds.flatMap((id) => {
       const element = findElement(page, id);
       return element && !element.locked ? [[id, element.transform] as const] : [];
     }));
-  }
-
-  function moveGroupDuringDrag(elementId: string, position: { x: number; y: number }) {
-    const origins = groupDragOrigin.current;
-    const stage = stageRef.current;
-    const origin = origins?.get(elementId);
-    if (!origins || !stage || !origin) return;
-    const dx = position.x - origin.x;
-    const dy = position.y - origin.y;
-    for (const [id, startingTransform] of origins) {
-      if (id === elementId) continue;
-      stage.findOne(`#${id}`)?.position({
-        x: startingTransform.x + dx,
-        y: startingTransform.y + dy,
-      });
+    if (origins.size < 2) {
+      groupDragOrigin.current = null;
+      return;
     }
-    stage.batchDraw();
+    groupDragOrigin.current = {
+      origins,
+      tracker: createGroupDragTracker(elementId, [...origins.keys()]),
+    };
   }
 
   function applyGroupMove() {
@@ -249,6 +283,8 @@ export function ComicEditor({
 
   function selectElement(elementId: string, additive = false) {
     const element = findElement(page, elementId);
+    const elementPanel = page.panels.find((panel) => panel.elements.some((item) => item.id === elementId));
+    if (elementPanel) setInsertionPanelId(elementPanel.id);
     if (element?.locked && additive) return;
     if (additive && selectedElementIds.length > 0) {
       const originalPanelId = page.panels.find((panel) => panel.elements.some((item) => item.id === selectedElementIds[0]))?.id;
@@ -367,8 +403,9 @@ export function ComicEditor({
   }
 
   function addElement(element: CanvasElementV1) {
+    if (!insertionPanel) return;
     if (dispatchCommand) {
-      dispatchCommand({ type: 'add_element', panel_id: page.panels[0].id, element });
+      dispatchCommand({ type: 'add_element', panel_id: insertionPanel.id, element });
       setSelectedElementId(element.id);
       setSelectedElementIds([element.id]);
       return;
@@ -378,7 +415,7 @@ export function ComicEditor({
       pages: document.pages.map((currentPage) => currentPage.id === page.id
         ? {
           ...currentPage,
-          panels: currentPage.panels.map((panel, index) => index === 0
+          panels: currentPage.panels.map((panel) => panel.id === insertionPanel.id
             ? { ...panel, elements: [...panel.elements, element] }
             : panel),
         }
@@ -389,7 +426,7 @@ export function ComicEditor({
   }
 
   function addTextElement() {
-    const topZ = Math.max(0, ...page.panels.flatMap((panel) => panel.elements.map((element) => element.z_index))) + 1;
+    const topZ = Math.max(0, ...(insertionPanel?.elements.map((element) => element.z_index) ?? [])) + 1;
     addElement({
       id: crypto.randomUUID(),
       type: 'text',
@@ -402,7 +439,7 @@ export function ComicEditor({
   }
 
   function addImageElement() {
-    const panel = page.panels[0];
+    const panel = insertionPanel;
     const asset = availableAssets.find((candidate) => candidate.status === 'approved');
     if (!panel || !asset) {
       setEditorError('请先在当前 IP 素材库批准一张图片，再添加到画格。');
@@ -427,7 +464,7 @@ export function ComicEditor({
   }
 
   function addSpeechBubbleElement() {
-    const panel = page.panels[0];
+    const panel = insertionPanel;
     if (!panel) return;
     const topZ = Math.max(0, ...panel.elements.map((element) => element.z_index)) + 1;
     addElement({
@@ -500,6 +537,7 @@ export function ComicEditor({
                 aria-pressed={item.id === page.id}
                 onClick={() => {
                   setCurrentPageId(item.id);
+                  setInsertionPanelId(item.panels[0]?.id ?? '');
                   setSelectedElementId(null);
                   setSelectedElementIds([]);
                   setInlineEdit(null);
@@ -556,8 +594,7 @@ export function ComicEditor({
                     onSelect={selectElement}
                     onEditText={startInlineEdit}
                     onDragStart={beginGroupDrag}
-                    onDragMove={moveGroupDuringDrag}
-                    onTransform={updateElementTransform}
+                    onPositionChange={updateElementTransform}
                   />
                   {(showGrid || showSafeArea) && (
                     <Layer listening={false} id="editor-guides-layer">
@@ -588,6 +625,7 @@ export function ComicEditor({
                   <Layer id="selection-layer">
                     <Transformer
                       ref={transformerRef}
+                      onTransformEnd={commitSelectionTransforms}
                       rotateEnabled
                       keepRatio={selectedElement?.type === 'image' || selectedElement?.type === 'sticker'}
                       enabledAnchors={['top-left', 'top-right', 'bottom-left', 'bottom-right', 'middle-left', 'middle-right', 'top-center', 'bottom-center']}
@@ -650,6 +688,12 @@ export function ComicEditor({
             <h3>当前画格图层</h3>
           </div>
           <div className="editor-insert-controls">
+            <label className="editor-insert-panel-target">
+              插入目标画格
+              <select aria-label="插入目标画格" value={insertionPanel?.id ?? ''} onChange={(event) => setInsertionPanelId(event.currentTarget.value)}>
+                {page.panels.map((panel, index) => <option key={panel.id} value={panel.id}>格 {index + 1}</option>)}
+              </select>
+            </label>
             <button type="button" onClick={addTextElement}>＋ 添加文字</button>
             <button type="button" disabled={!availableAssets.some((asset) => asset.status === 'approved')} onClick={addImageElement}>＋ 添加已批准图片</button>
             <button type="button" onClick={addSpeechBubbleElement}>＋ 添加对白气泡</button>

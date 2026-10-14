@@ -19,6 +19,7 @@ from app.services.assets import (
     delete_asset,
     get_asset,
     get_asset_file_path,
+    get_asset_version,
     list_assets,
     upload_asset,
 )
@@ -61,6 +62,19 @@ def read_assets(
 ) -> list[AssetUploadRead]:
     try:
         return [_to_read(record) for record in list_assets(session, current_admin.workspace_id, ip_id)]
+    except ResourceNotFound as error:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
+
+
+@router.get("/versions/{version_id}", response_model=AssetUploadRead)
+def read_asset_version(
+    version_id: UUID,
+    current_admin: Annotated[User, Depends(get_current_admin)],
+    session: Annotated[Session, Depends(get_session)],
+    ip_id: UUID,
+) -> AssetUploadRead:
+    try:
+        return _to_read(get_asset_version(session, current_admin.workspace_id, ip_id, version_id))
     except ResourceNotFound as error:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
 

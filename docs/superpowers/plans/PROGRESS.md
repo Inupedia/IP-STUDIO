@@ -241,3 +241,12 @@
 - 真实能力边界：API 管理员 probe 调用当前 Codex CLI 后没有成功 ImageGen 事件/PNG；重试退出码为 `1`，API 未开放 native run，因此 AC-25 继续 `BLOCKED`。GitHub Actions 远端尚未运行；相关命令已由同一工作树的本地 verifier 和 PG runtime 复演。
 - 外部兼容性证据：OpenAI 当前 [Sign in with ChatGPT preview limitations](https://developers.openai.com/siwc/token-sharing-open-source/preview-limitations) 将 ChatGPT-plan Codex App Server Responses 路径的 Image Generation 列为不支持。这与 AC-25 失败相符，但没有从 IP Studio 读取认证/transport 状态，因此根因仍标为推断；不通过私有接口、Cookie 或开发者 API 绕过门禁。
 - 状态：交接材料与 CI 配置已落地；Stage05 Task5 / 最终 release gate 仍未完成。除 AC-25 原生探测与待审核候选回流外，远端 GitHub Actions、发布版本验证日志和生产配置检查也待完成。
+
+### PR #1 合并前复审加固（2026-10-14）
+
+- 修复历史 AssetVersion 预览、画布有未保存修改时审批 Codex Patch、批量变换单元素误发组命令、剧本草稿切换丢失、对白同步撤销旧画布历史、脚本保存响应串集等复审问题。
+- 将 Konva 内容图层改为单次原子组变换，并为文本、对白、图片、气泡和形状加入透明命中区域；真实浏览器拖动回归验证所选兄弟图层与主图层位移一致。
+- 单集与人工生图任务的异步创建期间锁定工作台，并用 episode/panel/revision 身份校验丢弃过期响应；Playwright 请求门闩覆盖等待期间的交互。
+- 修正恢复 Runbook：先停止本地独立 `uvicorn` 进程再停止 PostgreSQL，恢复后明确启动 API；SHA256SUMS 使用与 `shasum -c` 一致的相对路径。
+- RED → GREEN：新增门闩测试在锁定实现前因缺少 `inert` 失败；画布拖动在透明命中层实现前无法使保存按钮变脏。修复后完整运行 `bash scripts/verify-v1.sh`：FastAPI 95 passed、Vitest 73 passed、Playwright Chromium 16 passed、Vite/TypeScript production build 成功；`git diff --check` 通过。
+- 发布状态：Draft PR #1 仍待更新远端 Actions/GitGuardian 结果；AC-25、发布版本验证日志和生产配置检查仍未满足 release gate。

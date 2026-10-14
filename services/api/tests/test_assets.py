@@ -256,3 +256,33 @@ def test_new_asset_version_keeps_previous_version_immutable(client: TestClient) 
     assert latest_content.content == second_content
     with client.app.state.session_factory() as session:
         assert session.scalar(select(func.count()).select_from(AssetVersion)) == 2
+
+
+def test_frozen_asset_version_can_be_resolved_after_new_version_upload(client: TestClient) -> None:
+    ip_id = create_ip(client, "FROZEN")
+    other_ip_id = create_ip(client, "OTHER")
+    first = upload(client, ip_id, image_bytes("PNG"))
+    assert first.status_code == 201
+    asset_id = first.json()["asset_id"]
+    old_version_id = first.json()["asset_version_id"]
+    second = client.post(
+        f"/api/v1/assets/{asset_id}/versions",
+        data={"ip_id": ip_id},
+        files={"file": ("new.webp", image_bytes("WEBP"), "image/webp")},
+    )
+    assert second.status_code == 201
+
+    resolved = client.get(
+        f"/api/v1/assets/versions/{old_version_id}",
+        params={"ip_id": ip_id},
+    )
+    denied = client.get(
+        f"/api/v1/assets/versions/{old_version_id}",
+        params={"ip_id": other_ip_id},
+    )
+
+    assert resolved.status_code == 200
+    assert resolved.json()["asset_id"] == asset_id
+    assert resolved.json()["asset_version_id"] == old_version_id
+    assert resolved.json()["version_no"] == 1
+    assert denied.status_code == 404

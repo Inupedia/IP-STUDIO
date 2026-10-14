@@ -14,22 +14,28 @@ export interface ScriptEditorProps {
   script: ScriptV1;
   onSave: (payload: ScriptSavePayload) => void | Promise<void>;
   saving?: boolean;
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
 function newId(): string {
   return crypto.randomUUID();
 }
 
-export function ScriptEditor({ revisionNo, sourceMarkdown, script, onSave, saving = false }: ScriptEditorProps) {
+export function ScriptEditor({ revisionNo, sourceMarkdown, script, onSave, saving = false, onDirtyChange }: ScriptEditorProps) {
   const [draft, setDraft] = useState(() => ScriptV1Schema.parse(script));
   const [markdown, setMarkdown] = useState(sourceMarkdown);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const isDirty = JSON.stringify(draft) !== JSON.stringify(script) || markdown !== sourceMarkdown;
 
   useEffect(() => {
     setDraft(ScriptV1Schema.parse(script));
     setMarkdown(sourceMarkdown);
   }, [revisionNo, script, sourceMarkdown]);
+
+  useEffect(() => {
+    onDirtyChange?.(isDirty);
+  }, [isDirty, onDirtyChange]);
 
   function patchScene(sceneIndex: number, patch: Partial<ScriptV1['scenes'][number]>) {
     setDraft((current) => ({
