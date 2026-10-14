@@ -150,7 +150,19 @@
 
 ## 阶段 04：Codex ImageGen 集成
 
-- [ ] Task 1–4：见 `2026-10-14-04-codex-imagegen-integration.md`
+- [x] Task 1：Codex 环境能力自检 PoC
+- [ ] Task 2：本地任务 Adapter 与图片安全回流
+- [ ] Task 3：结构化 CanvasPatch 白名单与授权校验
+- [ ] Task 4：用户确认、应用 Patch 与降级体验
+
+#### Task 1 交付记录
+
+- 提交：`feat(codex): probe real local imagegen capabilities`
+- RED 证据：能力模块实现前测试因 `app.codex` 不存在而失败；显式探测路由实现前，管理员 POST 测试因调用器缺失而失败。
+- GREEN 与回归：能力专项 `uv run --project services/api pytest services/api/tests/test_codex_capabilities.py -v`（9 passed）；完整后端 `uv run --project services/api pytest -q`（58 passed）；`git diff --check` 通过。
+- 真实探测：当前环境 `/opt/homebrew/bin/codex`，版本 `codex-cli 0.162.1`；`codex login status` 有效；stdio App Server 完成初始化并报告 `imageGeneration=true`；本轮一次原生 ImageGen 生成得到 1254×1254 PNG，Pillow 验证与完整解码成功。具体证据记录在 `docs/architecture/codex-capability-matrix.md`。
+- 结果：受管理员保护的 GET 只读查询 Codex 登录与 App Server provider 能力；provider 声明不会单独标为可用；管理员显式 POST 才会运行原生生成探测，检查工具事件、受限临时输出路径、PNG 解码及尺寸/大小，结果只缓存绑定当前 CLI 路径/版本，不会导入项目资产。探测失败时仍保留 ChatGPT Web 人工生成入口。
+- 限制：真实 ImageGen 调用期间出现模型目录与 hosted tool 通道瞬时超时，随后成功；API 每次显式探测若再次遇到此类超时会如实报告不可用。本机 PostgreSQL runtime 限制沿用阶段 01 记录。
 
 ## 阶段 05：导出与验收
 

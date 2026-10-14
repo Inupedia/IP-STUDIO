@@ -39,11 +39,11 @@
 - Consumes: 本地 Codex（如安装），Phase 03 手工生成入口
 - Produces: `probe_capabilities() -> CapabilityReport`；GET /api/v1/codex/capabilities -> `available/unavailable/needs_auth/unsupported` + reason；真实 probe 需验证可生成解码图片
 
-- [ ] **Step 1: Write the failing test** — `test_missing_codex_reports_unavailable / test_skill_present_but_imagegen_unavailable`；不能从 Skill 安装情况推断 imagegen 已可用；失败有错误原因且无假任务进度
-- [ ] **Step 2: Verify RED** — Run `cd services/api && uv run pytest tests/test_codex_capabilities.py -v`；expected **FAIL** for missing behavior, not missing dependencies.
-- [ ] **Step 3: Implement minimally** — 探测 Codex 可执行文件、当前认证及工具暴露情况；设计显式 E2E Probe（只在用户主动触发时消耗额度）；记录本机 CLI/App Server 实际版本及结果到能力矩阵，禁止硬编码肯定支持
-- [ ] **Step 4: Verify GREEN** — Run `cd services/api && uv run pytest tests/test_codex_capabilities.py -v`；expected **PASS**. Also run relevant regression suite.
-- [ ] **Step 5: Commit** — `git add services/api/app/codex services/api/app/api/codex.py services/api/tests/test_codex_capabilities.py docs/architecture/codex-capability-matrix.md && git commit -m "feat(codex): probe real local imagegen capabilities"`.
+- [x] **Step 1: Write the failing test** — 覆盖 CLI 缺失、未登录、provider 未暴露 ImageGen、仅声明能力不可直接标可用、API GET 不触发生图、显式 probe 必须有原生 ImageGen 事件及可解码 PNG。
+- [x] **Step 2: Verify RED** — 功能模块尚不存在时测试因 `app.codex` 缺失而失败；显式 probe API 实现前对应测试因缺少路由/调用器而失败，均为预期功能缺失。
+- [x] **Step 3: Implement minimally** — 使用 `codex login status` 和公开 App Server `modelProvider/capabilities/read`；GET 只读且不消耗生成额度，管理员 POST 才会启动临时、受限、可超时的 ImageGen E2E probe。要求事件记录中出现原生 ImageGen 调用、路径处于探测目录、PNG 魔数/解码/尺寸/大小均有效；仅缓存通过的 CLI 路径与版本。记录当前环境实际 CLI/App Server/ImageGen 证据及瞬时网络限制。
+- [x] **Step 4: Verify GREEN** — 能力专项后端 9 passed；完整后端 `uv run --project services/api pytest -q`（58 passed）；现场只读 probe 实测 Codex CLI `0.162.1`、登录有效、App Server `imageGeneration=true`；一次真实 CLI ImageGen 产物经 Pillow 校验为有效 `1254×1254` PNG；`git diff --check` 通过。
+- [x] **Step 5: Commit** — `feat(codex): probe real local imagegen capabilities`。
 
 
 ### Task 2: 本地任务 Adapter 与图片安全回流
