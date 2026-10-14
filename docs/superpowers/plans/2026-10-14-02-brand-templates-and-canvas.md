@@ -111,9 +111,9 @@
 - Consumes: CanvasDocumentV1 和品牌锁定层
 - Produces: `applyCanvasCommand(doc: CanvasDocumentV1, cmd: CanvasCommand): CanvasDocumentV1`; `save_document(episode_id: UUID, base_revision: int, payload: dict) -> DocumentRevision`
 
-- [ ] **Step 1: Write the failing test** — `commands.test.ts: undo_redo_text_and_image / locked_element_rejected; test_document_conflict_returns_409`: 变更一个图层不影响其他格；undo 正确；冲突绝不覆盖；聊天方向正确
-- [ ] **Step 2: Run the test to verify RED** — `pnpm --dir apps/web exec vitest run && cd services/api && uv run pytest tests/test_document_conflicts.py -v`; expected **FAIL** because the behavior has not been implemented.
-- [ ] **Step 3: Implement the minimal behavior** — 实现图片替换/裁切、文本双击 DOM 编辑、气泡/消息/锁层、50 步命令历史、1–3 秒 autosave 与 CAS 服务端校验
-- [ ] **Step 4: Run test to verify GREEN** — `pnpm --dir apps/web exec vitest run && cd services/api && uv run pytest tests/test_document_conflicts.py -v`; expected **PASS**. Run neighboring regression tests.
-- [ ] **Step 5: Commit** — `git add apps/web/src/features/editor services/api/app/services/documents.py services/api/app/api/documents.py services/api/tests/test_document_conflicts.py && git commit -m "feat(editor): add PPT-style layers with safe history"`.
+- [x] **Step 1: Write the failing test** — `commands.test.ts` 覆盖独立修改文字/图片、undo/redo 与锁定拒改；`DocumentStore.test.tsx` 覆盖 debounce、保存冲突停重试与保存期间编辑排队；`test_document_conflicts.py` 覆盖 CAS 409、外壳版本锁、历史恢复和跨 IP 资产拒绝。
+- [x] **Step 2: Run the test to verify RED** — 前端首先因缺少 `commands` 模块失败；后端文档请求在路由实现前返回 404。额外并发回归在修复前观察到保存中又启动第二个请求。
+- [x] **Step 3: Implement the minimal behavior** — 实现白名单画布命令、50 步历史、1.5 秒 debounce、并发保存串行排队、双击原生 DOM 文本编辑、图片替换/裁切和独立聊天/文字组件；服务端校验同 workspace/IP 的已批准引用，以 `base_revision` 原子 CAS 保存快照，并提供 revision 查看与无损恢复。
+- [x] **Step 4: Run test to verify GREEN** — `uv run --project services/api pytest -v`（39 passed）；`pnpm --filter @ip-studio/web test`（21 passed）；`pnpm --filter @ip-studio/web build` 成功；SQLite 上 Alembic upgrade、`alembic check`、downgrade base、upgrade head 全通过；`git diff --check` 通过。PostgreSQL runtime smoke test 因本机 Docker daemon 未运行、无本地 PostgreSQL 而未执行。
+- [x] **Step 5: Commit** — `feat(editor): add PPT-style layers with safe history`。
 

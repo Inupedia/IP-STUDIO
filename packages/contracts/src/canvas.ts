@@ -211,6 +211,17 @@ export type CanvasDocumentV1 = z.infer<typeof CanvasDocumentV1Schema>;
 export type CanvasElementV1 = z.infer<typeof CanvasElementV1Schema>;
 export type ChatMessagePropsV1 = z.infer<typeof ChatMessagePropsSchema>;
 
+export interface DocumentReadV1 {
+  revision: number;
+  document: CanvasDocumentV1 | null;
+}
+
+export interface DocumentRevisionReadV1 {
+  revision_no: number;
+  note: string | null;
+  created_at: string;
+}
+
 export function parseCanvasDocument(input: unknown): CanvasDocumentV1 {
   return CanvasDocumentV1Schema.parse(input);
 }

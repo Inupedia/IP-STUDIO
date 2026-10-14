@@ -13,6 +13,7 @@ import type {
   StyleVersion,
   TokenResponse,
 } from '@ip-studio/contracts/domain';
+import type { CanvasDocumentV1, DocumentReadV1, DocumentRevisionReadV1 } from '@ip-studio/contracts/canvas';
 
 const TOKEN_KEY = 'ip-studio-access-token';
 const AUTH_EXPIRED_EVENT = 'ip-studio:auth-expired';
@@ -195,6 +196,37 @@ export const api = {
     return request(`/api/v1/ips/${ipId}/default-style`, {
       method: 'PUT',
       body: jsonBody({ style_version_id: styleVersionId }),
+    });
+  },
+
+  getEpisodeDocument(episodeId: string): Promise<DocumentReadV1> {
+    return request(`/api/v1/episodes/${episodeId}/document`);
+  },
+
+  saveEpisodeDocument(
+    episodeId: string,
+    baseRevision: number,
+    document: CanvasDocumentV1,
+    note?: string,
+  ): Promise<DocumentReadV1> {
+    return request(`/api/v1/episodes/${episodeId}/document`, {
+      method: 'PUT',
+      body: jsonBody({ base_revision: baseRevision, document, note }),
+    });
+  },
+
+  getDocumentRevisions(episodeId: string): Promise<DocumentRevisionReadV1[]> {
+    return request(`/api/v1/episodes/${episodeId}/revisions`);
+  },
+
+  restoreDocumentRevision(
+    episodeId: string,
+    revisionNo: number,
+    baseRevision: number,
+  ): Promise<DocumentReadV1> {
+    return request(`/api/v1/episodes/${episodeId}/restore/${revisionNo}`, {
+      method: 'POST',
+      body: jsonBody({ base_revision: baseRevision }),
     });
   },
 };

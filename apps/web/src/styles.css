@@ -359,7 +359,14 @@ textarea::placeholder { color: #a2a49d; }
 .comic-editor { overflow: hidden; border: 1px solid var(--line); border-radius: 11px; background: var(--surface); box-shadow: var(--shadow); }
 .canvas-toolbar { display: flex; min-height: 48px; align-items: center; justify-content: space-between; gap: 16px; padding: 7px 12px; border-bottom: 1px solid var(--line); background: #fbfaf7; }
 .canvas-zoom-controls,
-.canvas-view-options { display: flex; align-items: center; gap: 8px; }
+.canvas-view-options,
+.canvas-history-controls { display: flex; align-items: center; gap: 8px; }
+.canvas-history-controls button { display: grid; width: 29px; min-height: 29px; place-items: center; border: 1px solid #dedfd6; border-radius: 6px; background: #fff; color: #555d52; font-size: 17px; }
+.save-indicator { margin-left: 3px; color: #73796f; font-size: 9px; white-space: nowrap; }
+.save-conflict,
+.save-error { color: #a04234; }
+.save-saving { color: #946b37; }
+.save-saved { color: #56725a; }
 .canvas-zoom-controls button { min-height: 29px; padding: 0 9px; border: 1px solid #dedfd6; border-radius: 6px; background: #fff; color: #555d52; font-size: 10px; }
 .canvas-zoom-controls button:disabled { opacity: .45; }
 .canvas-zoom-controls span { min-width: 40px; color: var(--muted); font-size: 10px; text-align: center; }
@@ -388,6 +395,7 @@ textarea::placeholder { color: #a2a49d; }
 .canvas-stage-viewport { position: relative; flex: 0 0 auto; }
 .canvas-stage-transform { position: absolute; top: 0; left: 0; overflow: hidden; transform-origin: top left; box-shadow: 0 8px 24px rgb(34 38 31 / 13%); }
 .canvas-stage-transform .konvajs-content { overflow: hidden; }
+.canvas-inline-text-editor { position: absolute; z-index: 3; box-sizing: border-box; resize: none; border: 2px solid var(--accent); border-radius: 3px; outline: none; padding: 8px; background: rgb(255 255 250 / 94%); color: var(--ink); font: inherit; line-height: 1.35; transform-origin: top left; }
 .editor-status-line { display: flex; justify-content: center; gap: 15px; padding-top: 9px; color: #777c72; font-size: 9px; }
 .editor-properties { min-width: 0; padding: 17px 13px; border-left: 1px solid var(--line); background: #fbfaf7; }
 .editor-properties-heading { margin-bottom: 12px; }
@@ -396,6 +404,8 @@ textarea::placeholder { color: #a2a49d; }
 .editor-property-fields input { min-height: 34px; font-size: 10px; }
 .layers-heading { margin-top: 15px; }
 .editor-layer-list { display: grid; gap: 3px; }
+.editor-insert-controls { display: flex; gap: 6px; margin: 0 0 7px; }
+.editor-insert-controls button { min-height: 28px; padding: 0 8px; border: 1px solid #dfe1d8; border-radius: 6px; background: #fff; color: #526b55; font-size: 9px; }
 .editor-layer-row { display: grid; min-width: 0; grid-template-columns: 21px minmax(0, 1fr) auto; align-items: center; gap: 6px; padding: 6px 5px; border: 1px solid transparent; border-radius: 6px; background: transparent; color: #5e645a; font-size: 9px; text-align: left; }
 .editor-layer-row:hover,
 .editor-layer-row.is-selected { border-color: #dde1d8; background: #f0f3ed; color: #3f5741; }
@@ -407,6 +417,15 @@ textarea::placeholder { color: #a2a49d; }
 .selected-element-card span,
 .selected-element-card small { color: var(--muted); font-size: 8px; }
 .selected-element-card strong { color: #465d48; font-size: 10px; }
+.selected-element-card label { gap: 5px; margin-top: 4px; color: #5d6459; font-size: 9px; }
+.selected-element-card select,
+.selected-element-card textarea { font-size: 9px; }
+.selected-element-card textarea { min-height: 58px; }
+.crop-controls { display: grid; gap: 3px; margin-top: 4px; }
+.crop-controls > span { color: #5d6459; font-size: 9px; }
+.crop-controls label { display: grid; grid-template-columns: 22px 1fr; align-items: center; gap: 4px; }
+.crop-controls input[type="range"] { min-height: 14px; height: 14px; padding: 0; border: 0; accent-color: var(--moss); }
+.editor-delete-button { justify-self: start; margin-top: 5px; padding: 4px 0; border: 0; background: transparent; color: #a34637; font-size: 9px; }
 .direction-override-note { color: #a15a36 !important; }
 .editor-lock-note { margin: 16px 0 0; padding-top: 11px; border-top: 1px solid #e9e9e2; color: #858a80; font-size: 8px; line-height: 1.6; }
 

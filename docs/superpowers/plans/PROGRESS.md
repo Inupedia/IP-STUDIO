@@ -54,6 +54,7 @@
 - 数据迁移：SQLite 上执行 Alembic upgrade、`alembic check`（无新变更）、downgrade base、再次 upgrade，全部通过。
 - 结果：建立单管理员 workspace、IP/Series/Episode 模型与迁移、workspace-scoped CRUD、JWT 登录及密码哈希；不同 workspace 的资源通过服务查询隔离，复合外键约束归属。
 - 环境限制：本机 Docker daemon 未运行，且没有本地 PostgreSQL 二进制，因此本任务无法做 PostgreSQL 容器运行时冒烟；使用 SQLite 跑 API 测试和迁移生命周期验证。Task 1 的 Compose 配置检查已通过。
+- 后续修复：阶段 02 复核发现后端布局 helper 会让预设 `panel-01` 覆盖已有 panel ID；新增回归断言确认 RED 后，在提交 `de883f6` 修正 ID 保留，前后端布局身份保持一致。
 
 ## 阶段 02：品牌模板与画布
 
@@ -61,7 +62,7 @@
 - [x] Task 2：4/6/8 格布局与页面继承
 - [x] Task 3：CanvasDocument v1 与消息方向协议
 - [x] Task 4：画布品牌层及独立内容图层
-- [ ] Task 5：图层编辑、撤销保存、并发冲突
+- [x] Task 5：图层编辑、撤销保存、并发冲突
 
 #### Task 1 交付记录
 
@@ -94,6 +95,15 @@
 - GREEN 与回归：编辑器专项 2 passed；完整前端 15 passed；Vite build 与 contracts strict TypeScript check 成功。后端当前回归为 35 passed。
 - 结果：品牌静态层不可选/不可拖动；标题和 EP 编号仅能在属性栏改文字；相同品牌配置重复渲染固定坐标；画格内容独立 Konva 节点并按 z_index 排序，画格容器剪裁；支持图片、原生文字、气泡、聊天消息、形状、贴纸、旋转/缩放/拖动、网格/安全区和页面切换。缩减布局将丢内容时显示错误并拒绝修改。
 - 限制：组件现可由 Episode 工作台消费；Episode 文档加载/保存及撤销命令在 Task 5/阶段 03 接入。
+
+#### Task 5 交付记录
+
+- 提交：`feat(editor): add PPT-style layers with safe history`
+- RED 证据：前端命令测试因 `commands` 模块缺失失败；后端文档 API 在实现前返回 404。新增保存期间继续编辑的回归测试在修复前观察到第二个旧 revision 请求并行发出。
+- GREEN 与回归：`uv run --project services/api pytest -v`（39 passed）；`pnpm --filter @ip-studio/web test`（21 passed）；`pnpm --filter @ip-studio/web build` 成功；`git diff --check` 通过。
+- 迁移验证：SQLite `0005_documents` upgrade、`alembic check`（无新差异）、downgrade base、upgrade head 均通过。
+- 结果：文本/聊天消息双击 DOM 编辑，原生文字、气泡、消息与图片保持独立图层；图层命令仅修改白名单字段、锁定元素拒改；50 步 undo/redo；1.5 秒防抖自动保存并串行排队编辑；API 以 `base_revision` CAS 原子写入快照，冲突返回 409；按 workspace/IP 检查批准的品牌、风格及图片引用；可读 revision 快照并恢复为新 revision。
+- 限制：本机 Docker daemon 未运行且没有 PostgreSQL 二进制，故未执行 PostgreSQL runtime smoke test；SQLite API 测试和 Alembic 生命周期已通过。
 
 ## 阶段 03：剧本分镜与生产
 

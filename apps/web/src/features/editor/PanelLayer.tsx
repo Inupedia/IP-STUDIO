@@ -11,7 +11,8 @@ import {
   Text,
 } from 'react-konva';
 import type { CanvasDocumentV1, CanvasElementV1 } from '@ip-studio/contracts/canvas';
-import { resolveMessageSide } from '@ip-studio/contracts/canvas';
+import { ChatMessage } from './elements/ChatMessage';
+import { TextElement } from './elements/TextElement';
 
 type ElementTransform = CanvasElementV1['transform'];
 
@@ -38,10 +39,11 @@ interface ElementNodeProps {
   element: CanvasElementV1;
   assetSources: Record<string, string>;
   onSelect: (id: string) => void;
+  onEditText: (id: string) => void;
   onTransform: (id: string, transform: ElementTransform) => void;
 }
 
-function ElementNode({ element, assetSources, onSelect, onTransform }: ElementNodeProps) {
+function ElementNode({ element, assetSources, onSelect, onEditText, onTransform }: ElementNodeProps) {
   const assetVersionId = 'asset_version_id' in element ? element.asset_version_id : undefined;
   const image = useImage(assetVersionId ? assetSources[assetVersionId] : undefined);
   const transform = element.transform;
@@ -74,6 +76,9 @@ function ElementNode({ element, assetSources, onSelect, onTransform }: ElementNo
     listening: true,
     onClick: () => onSelect(element.id),
     onTap: () => onSelect(element.id),
+    onDblClick: !element.locked && ['text', 'chat_message', 'speech_bubble', 'thought_bubble'].includes(element.type)
+      ? () => onEditText(element.id)
+      : undefined,
     onDragEnd: handleDragEnd,
     onTransformEnd: handleTransformEnd,
   };
@@ -98,19 +103,7 @@ function ElementNode({ element, assetSources, onSelect, onTransform }: ElementNo
     case 'text':
       return (
         <Group {...groupProps}>
-          <Text
-            width={transform.width}
-            height={transform.height}
-            text={element.props.text}
-            fontFamily={element.props.font_family}
-            fontSize={element.props.font_size}
-            fontStyle={element.props.font_weight >= 600 ? 'bold' : 'normal'}
-            fill={element.props.color}
-            align={element.props.align}
-            lineHeight={element.props.line_height}
-            letterSpacing={element.props.letter_spacing}
-            listening={false}
-          />
+          <TextElement element={element} />
         </Group>
       );
     case 'speech_bubble':
@@ -142,46 +135,9 @@ function ElementNode({ element, assetSources, onSelect, onTransform }: ElementNo
         </Group>
       );
     case 'chat_message': {
-      const side = element.props.direction_override
-        ?? resolveMessageSide(element.props.sender_id, element.props.self_participant_id);
-      const bubbleWidth = transform.width * 0.86;
-      const bubbleX = side === 'right' ? transform.width - bubbleWidth : 0;
-      const fill = element.props.theme === 'dark'
-        ? (side === 'right' ? '#637d69' : '#444a45')
-        : (side === 'right' ? '#dcebd9' : '#ffffff');
       return (
         <Group {...groupProps}>
-          <Rect
-            x={bubbleX}
-            width={bubbleWidth}
-            height={transform.height}
-            cornerRadius={17}
-            fill={fill}
-            stroke="#d8dcd3"
-            strokeWidth={1}
-            listening={false}
-          />
-          <Text
-            x={bubbleX + 13}
-            y={12}
-            width={bubbleWidth - 26}
-            height={transform.height - 42}
-            text={element.props.text}
-            fontSize={24}
-            fill={element.props.theme === 'dark' ? '#fff' : '#242923'}
-            listening={false}
-          />
-          <Text
-            x={bubbleX + 13}
-            y={transform.height - 26}
-            width={bubbleWidth - 26}
-            height={16}
-            text={element.props.sent_at}
-            fontSize={11}
-            fill={element.props.theme === 'dark' ? '#e0e2de' : '#73796f'}
-            align={side === 'right' ? 'right' : 'left'}
-            listening={false}
-          />
+          <ChatMessage element={element} />
         </Group>
       );
     }
@@ -249,11 +205,13 @@ export function PanelLayer({
   page,
   assetSources,
   onSelect,
+  onEditText,
   onTransform,
 }: {
   page: CanvasDocumentV1['pages'][number];
   assetSources: Record<string, string>;
   onSelect: (id: string) => void;
+  onEditText: (id: string) => void;
   onTransform: (id: string, transform: ElementTransform) => void;
 }) {
   return (
@@ -283,6 +241,7 @@ export function PanelLayer({
               element={element}
               assetSources={assetSources}
               onSelect={onSelect}
+              onEditText={onEditText}
               onTransform={onTransform}
             />
           ))}

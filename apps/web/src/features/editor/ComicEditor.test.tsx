@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { MouseEventHandler, ReactNode } from 'react';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import canvasFixture from '../../../../../packages/contracts/fixtures/canvas-v1.json';
@@ -18,6 +18,7 @@ vi.mock('react-konva', async () => {
         'data-y': y,
         'data-draggable': String(draggable),
         'data-listening': String(listening),
+        onDoubleClick: props.onDblClick as MouseEventHandler<HTMLDivElement> | undefined,
       },
       children ?? (typeof props.text === 'string' ? props.text : undefined),
     );
@@ -67,7 +68,7 @@ describe('ComicEditor', () => {
     expect(footer.getAttribute('data-listening')).toBe('false');
 
     fireEvent.change(screen.getByLabelText('页面标题'), { target: { value: '不在营业中' } });
-    const updated = onChange.mock.calls.at(-1)?.[0];
+    const updated = CanvasDocumentV1Schema.parse(onChange.mock.calls.at(-1)?.[0]);
     expect(updated.dynamic_fields.title).toBe('不在营业中');
     expect(updated.brand_template_version_id).toBe(document.brand_template_version_id);
     expect(updated.pages[0].brand_template_version_id).toBe(document.brand_template_version_id);
@@ -88,5 +89,23 @@ describe('ComicEditor', () => {
     expect(secondLogo.getAttribute('data-x')).toBe(firstLogo.getAttribute('data-x'));
     expect(secondLogo.getAttribute('data-y')).toBe(firstLogo.getAttribute('data-y'));
     expect(within(screen.getByTestId('brand-shell-layer')).getByText('另一集不同的标题')).toBeTruthy();
+  });
+
+  it('opens an inline text editor on double click and commits a native message layer', () => {
+    const onChange = vi.fn();
+    const chatElement = document.pages[0].panels[0].elements.find((element) => element.type === 'chat_message');
+    if (!chatElement) throw new Error('Expected chat message fixture element');
+    render(<ComicEditor document={document} brand={brand} onChange={onChange} />);
+
+    fireEvent.doubleClick(screen.getByTestId(chatElement.id));
+    const editor = screen.getByLabelText('画布内编辑文字');
+    fireEvent.change(editor, { target: { value: '在吗？（已修改）' } });
+    fireEvent.blur(editor);
+
+    const updated = CanvasDocumentV1Schema.parse(onChange.mock.calls.at(-1)?.[0]);
+    const updatedChat = updated.pages[0].panels[0].elements.find((element) => element.id === chatElement.id);
+    expect(updatedChat?.type).toBe('chat_message');
+    if (updatedChat?.type !== 'chat_message') throw new Error('Expected committed chat message');
+    expect(updatedChat.props.text).toBe('在吗？（已修改）');
   });
 });

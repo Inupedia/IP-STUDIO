@@ -4,12 +4,14 @@ import { Layer, Line, Rect, Stage, Transformer } from 'react-konva';
 import type { BrandTemplateV1 } from '@ip-studio/contracts/brand';
 import type { CanvasDocumentV1, CanvasElementV1 } from '@ip-studio/contracts/canvas';
 import { CanvasDocumentV1Schema } from '@ip-studio/contracts/canvas';
+import type { AssetVersion } from '@ip-studio/contracts/domain';
 import type { LayoutCode } from '@ip-studio/contracts/layout';
 import { applyLayout, getLayout } from '@ip-studio/contracts/layout';
 import { BrandLayer } from './BrandLayer';
 import { CanvasToolbar } from './CanvasToolbar';
 import { LayoutPicker } from '../templates/LayoutPicker';
 import { PanelLayer } from './PanelLayer';
+import type { CanvasCommand } from './commands';
 
 type PresetLayoutCode = Exclude<LayoutCode, 'custom'>;
 type ElementTransform = CanvasElementV1['transform'];
@@ -19,6 +21,13 @@ export interface ComicEditorProps {
   brand: BrandTemplateV1;
   onChange: (document: CanvasDocumentV1) => void;
   assetSources?: Record<string, string>;
+  availableAssets?: AssetVersion[];
+  dispatchCommand?: (command: CanvasCommand) => void;
+  canUndo?: boolean;
+  canRedo?: boolean;
+  onUndo?: () => void;
+  onRedo?: () => void;
+  saveStatus?: 'saved' | 'dirty' | 'saving' | 'conflict' | 'error';
 }
 
 function presetFromPage(page: CanvasDocumentV1['pages'][number]): PresetLayoutCode {
@@ -39,17 +48,61 @@ function findElement(page: CanvasDocumentV1['pages'][number], elementId: string 
   return null;
 }
 
-export function ComicEditor({ document, brand, onChange, assetSources = {} }: ComicEditorProps) {
+function withElementText(element: CanvasElementV1, text: string): CanvasElementV1 {
+  switch (element.type) {
+    case 'text':
+      return { ...element, props: { ...element.props, text } };
+    case 'chat_message':
+      return { ...element, props: { ...element.props, text } };
+    case 'speech_bubble':
+      return { ...element, props: { ...element.props, text } };
+    case 'thought_bubble':
+      return { ...element, props: { ...element.props, text } };
+    default:
+      return element;
+  }
+}
+
+function getEditableText(element: CanvasElementV1): string | null {
+  switch (element.type) {
+    case 'text':
+    case 'chat_message':
+    case 'speech_bubble':
+    case 'thought_bubble':
+      return element.props.text;
+    default:
+      return null;
+  }
+}
+
+export function ComicEditor({
+  document,
+  brand,
+  onChange,
+  assetSources = {},
+  availableAssets = [],
+  dispatchCommand,
+  canUndo = false,
+  canRedo = false,
+  onUndo,
+  onRedo,
+  saveStatus = 'saved',
+}: ComicEditorProps) {
   const [currentPageId, setCurrentPageId] = useState(document.pages[0]?.id ?? '');
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
   const [zoom, setZoom] = useState(0.7);
   const [showGrid, setShowGrid] = useState(false);
   const [showSafeArea, setShowSafeArea] = useState(false);
   const [editorError, setEditorError] = useState('');
+  const [inlineEdit, setInlineEdit] = useState<{ elementId: string; value: string } | null>(null);
   const stageRef = useRef<Konva.Stage | null>(null);
   const transformerRef = useRef<Konva.Transformer | null>(null);
   const page = document.pages.find((candidate) => candidate.id === currentPageId) ?? document.pages[0];
   const selectedElement = findElement(page, selectedElementId);
+  const inlineEditElement = inlineEdit ? findElement(page, inlineEdit.elementId) : null;
+  const inlineEditPanel = inlineEdit
+    ? page.panels.find((panel) => panel.elements.some((element) => element.id === inlineEdit.elementId)) ?? null
+    : null;
   const backgroundElements = brand.locked_elements.filter((element) => element.kind === 'background');
 
   useEffect(() => {
@@ -79,6 +132,10 @@ export function ComicEditor({ document, brand, onChange, assetSources = {} }: Co
   }
 
   function updateDynamicField(field: 'title' | 'episode_number', value: string) {
+    if (dispatchCommand) {
+      dispatchCommand({ type: 'set_dynamic_field', field, value });
+      return;
+    }
     updateDocument({
       ...document,
       dynamic_fields: { ...document.dynamic_fields, [field]: value },
@@ -86,6 +143,10 @@ export function ComicEditor({ document, brand, onChange, assetSources = {} }: Co
   }
 
   function updateElementTransform(elementId: string, transform: ElementTransform) {
+    if (dispatchCommand) {
+      dispatchCommand({ type: 'set_transform', element_id: elementId, transform });
+      return;
+    }
     const next = {
       ...document,
       pages: document.pages.map((currentPage) => ({
@@ -104,6 +165,12 @@ export function ComicEditor({ document, brand, onChange, assetSources = {} }: Co
   function changeLayout(code: PresetLayoutCode) {
     try {
       const layout = getLayout(code, page.width, page.height);
+      if (dispatchCommand) {
+        dispatchCommand({ type: 'set_layout', page_id: page.id, layout });
+        setSelectedElementId(null);
+        setEditorError('');
+        return;
+      }
       const flatPage = {
         brand_template_version_id: page.brand_template_version_id,
         panels: page.panels.map((panel) => ({
@@ -118,7 +185,7 @@ export function ComicEditor({ document, brand, onChange, assetSources = {} }: Co
         return {
           id: existing?.id ?? crypto.randomUUID(),
           rect: { x: panel.x, y: panel.y, width: panel.width, height: panel.height },
-          elements: existing?.elements ?? [],
+          elements: (existing?.elements as CanvasElementV1[] | undefined) ?? [],
         };
       });
       updateDocument({
@@ -134,6 +201,115 @@ export function ComicEditor({ document, brand, onChange, assetSources = {} }: Co
     }
   }
 
+  function updateElementText(elementId: string, text: string) {
+    if (dispatchCommand) {
+      dispatchCommand({ type: 'set_text', element_id: elementId, text });
+      return;
+    }
+    updateDocument({
+      ...document,
+      pages: document.pages.map((currentPage) => ({
+        ...currentPage,
+        panels: currentPage.panels.map((panel) => ({
+          ...panel,
+          elements: panel.elements.map((element) => {
+            if (element.id !== elementId) return element;
+            return withElementText(element, text);
+          }),
+        })),
+      })),
+    });
+  }
+
+  function startInlineEdit(elementId: string) {
+    const element = findElement(page, elementId);
+    if (!element || element.locked) return;
+    const value = getEditableText(element);
+    if (value === null) return;
+    setSelectedElementId(elementId);
+    setInlineEdit({ elementId, value });
+  }
+
+  function commitInlineEdit() {
+    if (!inlineEdit) return;
+    const current = findElement(page, inlineEdit.elementId);
+    if (current && getEditableText(current) !== inlineEdit.value) {
+      updateElementText(inlineEdit.elementId, inlineEdit.value);
+    }
+    setInlineEdit(null);
+  }
+
+  function updateImageCrop(elementId: string, crop: { x: number; y: number; width: number; height: number }) {
+    if (dispatchCommand) {
+      dispatchCommand({ type: 'set_crop', element_id: elementId, crop });
+      return;
+    }
+    updateDocument({
+      ...document,
+      pages: document.pages.map((currentPage) => ({
+        ...currentPage,
+        panels: currentPage.panels.map((panel) => ({
+          ...panel,
+          elements: panel.elements.map((element) => element.id === elementId && element.type === 'image'
+            ? { ...element, crop }
+            : element),
+        })),
+      })),
+    });
+  }
+
+  function addElement(element: CanvasElementV1) {
+    if (dispatchCommand) {
+      dispatchCommand({ type: 'add_element', panel_id: page.panels[0].id, element });
+      setSelectedElementId(element.id);
+      return;
+    }
+    updateDocument({
+      ...document,
+      pages: document.pages.map((currentPage) => currentPage.id === page.id
+        ? {
+          ...currentPage,
+          panels: currentPage.panels.map((panel, index) => index === 0
+            ? { ...panel, elements: [...panel.elements, element] }
+            : panel),
+        }
+        : currentPage),
+    });
+    setSelectedElementId(element.id);
+  }
+
+  function addTextElement() {
+    const topZ = Math.max(0, ...page.panels.flatMap((panel) => panel.elements.map((element) => element.z_index))) + 1;
+    addElement({
+      id: crypto.randomUUID(),
+      type: 'text',
+      props: { text: '在属性栏编辑文字', font_family: 'sans-serif', font_size: 32, font_weight: 400, color: '#242923', align: 'left', line_height: 1.3, letter_spacing: 0 },
+      transform: { x: 40, y: 40, width: 360, height: 90, rotation: 0 },
+      opacity: 1,
+      z_index: topZ,
+      locked: false,
+    });
+  }
+
+  function deleteSelectedElement() {
+    if (!selectedElement || selectedElement.locked) return;
+    if (dispatchCommand) {
+      dispatchCommand({ type: 'delete_element', element_id: selectedElement.id });
+    } else {
+      updateDocument({
+        ...document,
+        pages: document.pages.map((currentPage) => ({
+          ...currentPage,
+          panels: currentPage.panels.map((panel) => ({
+            ...panel,
+            elements: panel.elements.filter((element) => element.id !== selectedElement.id),
+          })),
+        })),
+      });
+    }
+    setSelectedElementId(null);
+  }
+
   return (
     <section className="comic-editor" aria-label="漫画画布编辑器">
       <CanvasToolbar
@@ -143,6 +319,11 @@ export function ComicEditor({ document, brand, onChange, assetSources = {} }: Co
         onGridChange={setShowGrid}
         showSafeArea={showSafeArea}
         onSafeAreaChange={setShowSafeArea}
+        canUndo={canUndo}
+        canRedo={canRedo}
+        onUndo={onUndo}
+        onRedo={onRedo}
+        saveStatus={saveStatus}
       />
       <div className="editor-workbench">
         <aside className="editor-page-rail" aria-label="页面列表">
@@ -160,6 +341,7 @@ export function ComicEditor({ document, brand, onChange, assetSources = {} }: Co
                 onClick={() => {
                   setCurrentPageId(item.id);
                   setSelectedElementId(null);
+                  setInlineEdit(null);
                 }}
               >
                 <span className="editor-page-thumb" aria-hidden="true">
@@ -206,6 +388,7 @@ export function ComicEditor({ document, brand, onChange, assetSources = {} }: Co
                     page={page}
                     assetSources={assetSources}
                     onSelect={setSelectedElementId}
+                    onEditText={startInlineEdit}
                     onTransform={updateElementTransform}
                   />
                   {(showGrid || showSafeArea) && (
@@ -247,6 +430,27 @@ export function ComicEditor({ document, brand, onChange, assetSources = {} }: Co
                     />
                   </Layer>
                 </Stage>
+                {inlineEdit && inlineEditElement && inlineEditPanel && getEditableText(inlineEditElement) !== null && (
+                  <textarea
+                    autoFocus
+                    aria-label="画布内编辑文字"
+                    className="canvas-inline-text-editor"
+                    style={{
+                      left: inlineEditPanel.rect.x + inlineEditElement.transform.x,
+                      top: inlineEditPanel.rect.y + inlineEditElement.transform.y,
+                      width: inlineEditElement.transform.width,
+                      height: inlineEditElement.transform.height,
+                      transform: `rotate(${inlineEditElement.transform.rotation}deg)`,
+                    }}
+                    value={inlineEdit.value}
+                    onChange={(event) => setInlineEdit({ ...inlineEdit, value: event.currentTarget.value })}
+                    onBlur={commitInlineEdit}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Escape') setInlineEdit(null);
+                      if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) event.currentTarget.blur();
+                    }}
+                  />
+                )}
               </div>
             </div>
           </div>
@@ -277,6 +481,9 @@ export function ComicEditor({ document, brand, onChange, assetSources = {} }: Co
             <p className="eyebrow">LAYERS</p>
             <h3>当前画格图层</h3>
           </div>
+          <div className="editor-insert-controls">
+            <button type="button" onClick={addTextElement}>＋ 添加文字</button>
+          </div>
           <div className="editor-layer-list">
             {page.panels.flatMap((panel, panelIndex) => panel.elements.map((element) => (
               <button
@@ -300,6 +507,83 @@ export function ComicEditor({ document, brand, onChange, assetSources = {} }: Co
               <small>{selectedElement.locked ? '此图层已锁定' : '可在画布中拖动与调整大小'}</small>
               {selectedElement.type === 'chat_message' && selectedElement.props.direction_override && (
                 <small className="direction-override-note">方向被手动覆盖为{selectedElement.props.direction_override === 'right' ? '右侧' : '左侧'}</small>
+              )}
+              {!selectedElement.locked && (
+                <>
+                  {(selectedElement.type === 'text' || selectedElement.type === 'speech_bubble'
+                    || selectedElement.type === 'thought_bubble' || selectedElement.type === 'chat_message') && (
+                    <label>
+                      {selectedElement.type === 'chat_message' ? '消息文字' : '文字内容'}
+                      <textarea
+                        aria-label="图层文字内容"
+                        rows={3}
+                        maxLength={10000}
+                        value={selectedElement.props.text}
+                        onChange={(event) => updateElementText(selectedElement.id, event.currentTarget.value)}
+                      />
+                    </label>
+                  )}
+                  {(selectedElement.type === 'image' || selectedElement.type === 'sticker') && (
+                    <label>
+                      替换素材
+                      <select
+                        aria-label="替换素材"
+                        value={selectedElement.asset_version_id}
+                        onChange={(event) => {
+                          const nextAssetVersionId = event.currentTarget.value;
+                          if (dispatchCommand) {
+                            dispatchCommand({ type: 'replace_image', element_id: selectedElement.id, asset_version_id: nextAssetVersionId });
+                          } else {
+                            updateDocument({
+                              ...document,
+                              pages: document.pages.map((currentPage) => ({
+                                ...currentPage,
+                                panels: currentPage.panels.map((panel) => ({
+                                  ...panel,
+                                  elements: panel.elements.map((element) => element.id === selectedElement.id
+                                    && (element.type === 'image' || element.type === 'sticker')
+                                    ? { ...element, asset_version_id: nextAssetVersionId }
+                                    : element),
+                                })),
+                              })),
+                            });
+                          }
+                        }}
+                      >
+                        <option value={selectedElement.asset_version_id}>当前素材</option>
+                        {availableAssets
+                          .filter((asset) => asset.status === 'approved' && asset.asset_version_id !== selectedElement.asset_version_id)
+                          .map((asset) => <option key={asset.asset_version_id} value={asset.asset_version_id}>{asset.name} · v{asset.version_no}</option>)}
+                      </select>
+                    </label>
+                  )}
+                  {selectedElement.type === 'image' && (
+                    <div className="crop-controls">
+                      <span>图片裁切</span>
+                      {(['x', 'y', 'width', 'height'] as const).map((axis) => (
+                        <label key={axis}>
+                          {({ x: '左', y: '上', width: '宽', height: '高' })[axis]}
+                          <input
+                            type="range"
+                            min={axis === 'x' || axis === 'y' ? 0 : 0.001}
+                            max={axis === 'x' ? 1 - selectedElement.crop.width
+                              : axis === 'y' ? 1 - selectedElement.crop.height
+                                : axis === 'width' ? 1 - selectedElement.crop.x
+                                  : 1 - selectedElement.crop.y}
+                            step={0.001}
+                            value={selectedElement.crop[axis]}
+                            onChange={(event) => {
+                              const value = Number(event.currentTarget.value);
+                              const crop = { ...selectedElement.crop, [axis]: value };
+                              updateImageCrop(selectedElement.id, crop);
+                            }}
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                  <button type="button" className="editor-delete-button" onClick={deleteSelectedElement}>删除图层</button>
+                </>
               )}
             </div>
           )}
