@@ -22,6 +22,11 @@ from app.services.assets import (
     list_assets,
     upload_asset,
 )
+from app.services.bibles import (
+    ResourceConflict as BibleConflict,
+    ResourceNotFound as BibleNotFound,
+    approve_asset_version,
+)
 from app.storage.local_blobs import AssetValidationError
 
 router = APIRouter(prefix="/api/v1/assets", tags=["assets"])
@@ -35,7 +40,7 @@ def _to_read(record: AssetRecord) -> AssetUploadRead:
         owner_ip_id=record.asset.owner_ip_id,
         type=record.asset.type,
         name=record.asset.name,
-        status=record.asset.status,
+        status=record.version.status,
         version_no=record.version.version_no,
         sha256=record.blob.sha256,
         mime=record.blob.mime,
@@ -150,6 +155,41 @@ def read_asset(
         return _to_read(get_asset(session, current_admin.workspace_id, ip_id, asset_id))
     except ResourceNotFound as error:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
+
+
+@router.post(
+    "/{asset_id}/versions/{version_id}/approve", response_model=AssetUploadRead
+)
+def approve_asset_version_route(
+    asset_id: UUID,
+    version_id: UUID,
+    request: Request,
+    current_admin: Annotated[User, Depends(get_current_admin)],
+    session: Annotated[Session, Depends(get_session)],
+    ip_id: UUID,
+) -> AssetUploadRead:
+    try:
+        approve_asset_version(
+            session,
+            current_admin.workspace_id,
+            ip_id,
+            asset_id,
+            version_id,
+            current_admin.id,
+        )
+        record, _ = get_asset_file_path(
+            session,
+            current_admin.workspace_id,
+            ip_id,
+            asset_id,
+            Path(request.app.state.asset_storage_dir),
+            version_id,
+        )
+        return _to_read(record)
+    except (BibleNotFound, ResourceNotFound) as error:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
+    except (BibleConflict, ResourceConflict) as error:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
 
 
 @router.get("/{asset_id}/content")

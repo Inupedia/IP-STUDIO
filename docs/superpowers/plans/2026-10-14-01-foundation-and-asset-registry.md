@@ -93,11 +93,11 @@
 - Consumes: AssetVersion 与 IP
 - Produces: `create_character_candidate(character_id: UUID, bible: dict) -> CharacterVersion`; `approve_character_version(version_id: UUID) -> CharacterVersion`; Style 对应能力
 
-- [ ] **Step 1: Write the failing test** — `test_approved_character_immutable / test_approved_style_immutable / test_unapproved_reference_rejected`: 已批准版不能覆盖，更新需要新 candidate；参考图必须存在且授权
-- [ ] **Step 2: Run the test to verify RED** — `cd services/api && uv run pytest tests/test_bibles.py -v`; expected **FAIL** because the behavior has not been implemented.
-- [ ] **Step 3: Implement the minimal behavior** — 实现角色/画风载荷与审批状态，保存版本唯一约束、来源参考和审计
-- [ ] **Step 4: Run test to verify GREEN** — `cd services/api && uv run pytest tests/test_bibles.py -v`; expected **PASS**. Run neighboring regression tests.
-- [ ] **Step 5: Commit** — `git add services/api/app services/api/alembic services/api/tests/test_bibles.py && git commit -m "feat(ip): introduce immutable character and style bibles"`.
+- [x] **Step 1: Write the failing test** — 已批准版保留原 payload 并可派生候选；角色/画风引用需为同 IP 已批准素材；默认画风需为同 IP 已批准版本。
+- [x] **Step 2: Run the test to verify RED** — `uv run --project services/api pytest services/api/tests/test_bibles.py -v`；4 项因 Character/Style API 未实现返回 404。
+- [x] **Step 3: Implement the minimal behavior** — Character/Style JSON Bible、追加式版本和审批审计、AssetVersion 审批与引用授权、IP 默认画风。
+- [x] **Step 4: Run test to verify GREEN** — 专项测试 4 passed；完整后端 23 passed；前端 Vitest 1 passed、Vite build 成功。SQLite Alembic upgrade/check/downgrade/upgrade 均通过。
+- [x] **Step 5: Commit** — `feat(ip): introduce immutable character and style bibles`。
 
 
 ### Task 5: 多 IP 资产管理页面

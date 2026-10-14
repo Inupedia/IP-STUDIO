@@ -1,5 +1,6 @@
 from app.models.base import Base
 from app.models.assets import Asset, AssetLink, AssetVersion, Blob
+from app.models.bibles import Character, CharacterVersion, Style, StyleVersion
 from app.models.ip import IP
 from app.models.story import Episode, Series
 from app.models.workspace import User, Workspace
@@ -10,9 +11,13 @@ __all__ = [
     "AssetVersion",
     "Base",
     "Blob",
+    "Character",
+    "CharacterVersion",
     "Episode",
     "IP",
     "Series",
+    "Style",
+    "StyleVersion",
     "User",
     "Workspace",
 ]

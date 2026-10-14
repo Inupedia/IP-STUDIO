@@ -21,3 +21,4 @@ class IP(TimestampMixin, Base):
     name: Mapped[str] = mapped_column(String(120), nullable=False)
     summary: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(String(24), nullable=False, default="active")
+    default_style_version_id: Mapped[UUID | None] = mapped_column(UUID_COLUMN, nullable=True)

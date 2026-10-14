@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.auth import router as auth_router
 from app.api.assets import router as assets_router
+from app.api.bibles import router as bibles_router
 from app.api.ips import router as ips_router
 from app.api.story import router as story_router
 from app.config import Settings
@@ -73,6 +74,7 @@ def create_app(
     application.include_router(health_router)
     application.include_router(auth_router)
     application.include_router(assets_router)
+    application.include_router(bibles_router)
     application.include_router(ips_router)
     application.include_router(story_router)
     return application

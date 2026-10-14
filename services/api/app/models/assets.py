@@ -1,7 +1,9 @@
+from datetime import datetime
 from uuid import UUID
 
 from sqlalchemy import (
     CheckConstraint,
+    DateTime,
     ForeignKey,
     ForeignKeyConstraint,
     Integer,
@@ -76,10 +78,19 @@ class AssetVersion(TimestampMixin, Base):
             ondelete="RESTRICT",
         ),
         ForeignKeyConstraint(["blob_id"], ["blobs.id"], ondelete="RESTRICT"),
+        ForeignKeyConstraint(
+            ["approved_by_user_id", "workspace_id"],
+            ["users.id", "users.workspace_id"],
+            name="fk_asset_versions_approver_workspace",
+            ondelete="RESTRICT",
+        ),
         UniqueConstraint("asset_id", "version_no", name="uq_asset_versions_asset_version"),
         UniqueConstraint("id", "workspace_id", name="uq_asset_versions_id_workspace"),
         CheckConstraint("version_no > 0", name="ck_asset_versions_version_positive"),
         CheckConstraint("width > 0 AND height > 0", name="ck_asset_versions_dimensions_positive"),
+        CheckConstraint(
+            "status IN ('candidate', 'approved', 'archived')", name="ck_asset_versions_status"
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(UUID_COLUMN, primary_key=True, default=new_id)
@@ -91,6 +102,11 @@ class AssetVersion(TimestampMixin, Base):
     height: Mapped[int] = mapped_column(Integer, nullable=False)
     alpha: Mapped[bool] = mapped_column(nullable=False)
     metadata_json: Mapped[dict[str, object]] = mapped_column(JSON, nullable=False, default=dict)
+    status: Mapped[str] = mapped_column(
+        String(24), nullable=False, default="candidate", server_default="candidate"
+    )
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    approved_by_user_id: Mapped[UUID | None] = mapped_column(UUID_COLUMN, nullable=True)
 
 
 class AssetLink(Base):

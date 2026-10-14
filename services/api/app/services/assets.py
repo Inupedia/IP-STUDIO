@@ -120,6 +120,7 @@ def create_asset_version(
         alpha=alpha,
         metadata_json=metadata_json or {},
     )
+    asset.status = "candidate"
     session.add(version)
     try:
         session.commit()

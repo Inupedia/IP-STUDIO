@@ -17,8 +17,17 @@
 
 - [x] Task 2：Workspace / IP / Series / Episode 数据与 API
 - [x] Task 3：安全上传 / Blob 去重 / AssetVersion
-- [ ] Task 4：Character Bible 与 Style Bible 批准版本
+- [x] Task 4：Character Bible 与 Style Bible 批准版本
 - [ ] Task 5：多 IP 资产管理页面
+
+#### Task 4 交付记录
+
+- 提交：`feat(ip): introduce immutable character and style bibles`
+- RED 证据：`uv run --project services/api pytest services/api/tests/test_bibles.py -v` 在 API 尚未实现时 4 项均因 Character/Style 路由返回 404 而失败。
+- GREEN 与回归：专项 4 passed；完整后端 `uv run --project services/api pytest -v`（23 passed）；前端 `pnpm --filter @ip-studio/web test`（1 passed）及 `pnpm --filter @ip-studio/web build` 成功。
+- 迁移验证：SQLite 上 upgrade head、`alembic check`（无新变更）、downgrade base、再次 upgrade，全部通过。
+- 结果：角色与画风 Bible 使用结构化 JSON；版本仅能追加，已批准版本不能再次审批或被覆盖；新候选可基于已批准版本派生；审批记录管理员与时间；引用素材要求已批准且属于同一 IP；IP 默认画风仅接受本 IP 的已批准 StyleVersion。另补齐素材版本审批 API，供引用流程使用。
+- 环境限制：本机 PostgreSQL 运行时仍受 Docker daemon 未运行及无本地 PostgreSQL 二进制影响；本任务以 SQLite API 测试和 Alembic 生命周期检查验证。
 
 #### Task 3 交付记录
 

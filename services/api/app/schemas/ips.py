@@ -35,6 +35,7 @@ class IPRead(BaseModel):
     name: str
     summary: str | None
     status: str
+    default_style_version_id: UUID | None = None
     created_at: datetime
 
 

@@ -15,7 +15,10 @@ class Workspace(TimestampMixin, Base):
 
 class User(TimestampMixin, Base):
     __tablename__ = "users"
-    __table_args__ = (UniqueConstraint("workspace_id", name="uq_users_one_admin_per_workspace"),)
+    __table_args__ = (
+        UniqueConstraint("workspace_id", name="uq_users_one_admin_per_workspace"),
+        UniqueConstraint("id", "workspace_id", name="uq_users_id_workspace"),
+    )
 
     id: Mapped[UUID] = mapped_column(UUID_COLUMN, primary_key=True, default=new_id)
     workspace_id: Mapped[UUID] = mapped_column(
