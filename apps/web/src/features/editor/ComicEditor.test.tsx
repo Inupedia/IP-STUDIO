@@ -91,6 +91,13 @@ describe('ComicEditor', () => {
     expect(within(screen.getByTestId('brand-shell-layer')).getByText('另一集不同的标题')).toBeTruthy();
   });
 
+  it('offers PNG and editable PPTX export only after the document is saved', () => {
+    render(<ComicEditor document={document} brand={brand} onChange={vi.fn()} saveStatus="dirty" />);
+
+    expect(screen.getByRole('button', { name: '导出 PNG 图组' }).hasAttribute('disabled')).toBe(true);
+    expect(screen.getByRole('button', { name: '导出可编辑 PPTX' }).hasAttribute('disabled')).toBe(true);
+  });
+
   it('opens an inline text editor on double click and commits a native message layer', () => {
     const onChange = vi.fn();
     const chatElement = document.pages[0].panels[0].elements.find((element) => element.type === 'chat_message');

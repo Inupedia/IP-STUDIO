@@ -194,7 +194,7 @@
 
 - [x] Task 1：原尺寸 PNG 多页导出
 - [x] Task 2：工程 ZIP 备份/恢复与完整性校验
-- [ ] Task 3：原生对象 PPTX 导出
+- [x] Task 3：原生对象 PPTX 导出
 - [ ] Task 4：EP01 / EP02 回归和 AC-01～AC-26 验收
 - [ ] Task 5：本地部署、备份/恢复与交接审核
 
@@ -214,3 +214,11 @@
 - 结果：新增 revision-scoped 工程 ZIP 导出和管理员导入 API。包内含严格版本化 manifest、不可变文档快照和所有被文档/品牌/画风引用的批准素材；Blob 使用内容哈希路径。导入先检查 ZIP 路径/条目/大小、schema、引用集合、SHA-256、MIME、图片解码和尺寸，再于一个数据库事务中创建新系列/单集，并将跨 IP 的资产、品牌和画风版本映射到目标 IP。导入不覆盖已有项目，复制的批准快照记录当前管理员为批准人，并创建 AssetLink 固定引用。
 - 验收边界：覆盖 ZIP Slip、绝对路径、软链接、重复或多余条目、不支持的压缩方法、缺失/篡改 Blob、manifest/文档大小、解压尺寸上限及跨 IP 重映射；本任务未改数据库 schema，因此无需迁移。本机 PostgreSQL runtime 仍不可用，API 集成验证运行在 SQLite。
 - 提交：`feat(export): add verifiable editable project zip`。
+
+#### Task 3 交付记录
+
+- 提交：`feat(export): create element-editable pptx manga`。
+- RED 证据：PPTX Mapper 与导出模块实现前，专项测试因模块不存在而按预期失败；GREEN 测试读取真实 PPTX ZIP/XML，断言独立图片、原生形状、聊天文字和标题对象存在。
+- GREEN 与回归：PPTX 专项 7 passed；完整前端 `pnpm --filter @ip-studio/web test`（63 passed）；`pnpm --filter @ip-studio/web build` 成功；LibreOffice 将生成的 PPTX 作为 Impress 文档打开并成功导出 1 页 PDF；`git diff --check` 通过。
+- 结果：新增逐页纵向 PPTX 导出与画布对象映射，图片、文字、对话/思考气泡、聊天消息、形状、画格框和品牌外壳分别写入演示文稿。导出要求当前 revision 已保存，校验品牌尺寸及全部图片引用；气泡尾巴、图片裁切、字体换行/标题溢出和画格外元素可能近似时返回可见提示。
+- 边界：素材仍是独立位图对象，不承诺逐笔可编辑；PPTX 导出入口已挂在 `ComicEditor`，可从主应用导航打开的工作流留在 Task 4 接入。PostgreSQL runtime 受本机数据库服务不可用限制，PPTX 导出为纯前端功能。

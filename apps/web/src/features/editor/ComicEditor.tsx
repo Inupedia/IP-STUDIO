@@ -13,6 +13,7 @@ import { LayoutPicker } from '../templates/LayoutPicker';
 import { PanelLayer } from './PanelLayer';
 import { applyCanvasCommand, type CanvasCommand } from './commands';
 import { ReplacePanelImage } from './ReplacePanelImage';
+import { ExportPanel } from '../export/ExportPanel';
 
 type PresetLayoutCode = Exclude<LayoutCode, 'custom'>;
 type ElementTransform = CanvasElementV1['transform'];
@@ -573,6 +574,14 @@ export function ComicEditor({
             </div>
           )}
           <p className="editor-lock-note">品牌背景、Logo、标题栏和页脚只能在品牌模板中派生新版本后更改。</p>
+          <ExportPanel
+            episodeId={document.episode_id}
+            currentRevision={document.revision}
+            canvasDocument={document}
+            brand={brand}
+            assetSources={assetSources}
+            isSaved={saveStatus === 'saved'}
+          />
         </aside>
       </div>
     </section>

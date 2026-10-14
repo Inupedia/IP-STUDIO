@@ -76,11 +76,11 @@
 - Consumes: CanvasDocumentV1 + 品牌外壳 + 独立 image/text/shape/chat 元素
 - Produces: `mapCanvasElementToPptx(element: CanvasElement, context: PptxContext): PptxObject[]`; `exportEpisodePptx(doc: CanvasDocumentV1): Promise<Blob>`
 
-- [ ] **Step 1: Write the failing test** — `test_pptx_contains_text_and_multiple_picture_shapes`；用 jszip/PPTX XML 检查存在独立文本框和多图片/形状节点，不能仅整页一个 raster
-- [ ] **Step 2: Verify RED** — Run `pnpm --dir apps/web exec vitest run src/features/export/pptxMapper.test.ts src/features/export/exportPptx.test.ts`；expected **FAIL** for missing behavior, not missing dependencies.
-- [ ] **Step 3: Implement minimally** — PptxGenJS 为每页建纵向 slide，独立生成文字、气泡背景/尾巴、聊天组件、角色图片；复杂裁切或字体不等价时 warnings[] 告警
-- [ ] **Step 4: Verify GREEN** — Run `pnpm --dir apps/web exec vitest run src/features/export/pptxMapper.test.ts src/features/export/exportPptx.test.ts`；expected **PASS**. Also run relevant regression suite.
-- [ ] **Step 5: Commit** — `git add apps/web/src/features/export && git commit -m "feat(export): create element-editable pptx manga"`.
+- [x] **Step 1: Write the failing test** — `test_pptx_contains_text_and_multiple_picture_shapes`；用 jszip/PPTX XML 检查存在独立文本框和多图片/形状节点，不能仅整页一个 raster
+- [x] **Step 2: Verify RED** — 首轮测试因 `pptxMapper` 与 `exportPptx` 模块缺失而按预期失败。
+- [x] **Step 3: Implement minimally** — PptxGenJS 为每页建纵向 slide，独立生成文字、气泡背景/尾巴、聊天组件、角色图片；复杂裁切或字体不等价时 warnings[] 告警
+- [x] **Step 4: Verify GREEN** — PPTX Mapper/导出专项 7 passed；完整前端 Vitest 63 passed；Vite/TypeScript production build 成功；LibreOffice 将生成的 PPTX 成功转换为 PDF；`git diff --check` 通过。
+- [x] **Step 5: Commit** — `feat(export): create element-editable pptx manga`。
 
 
 ### Task 4: EP01 / EP02 回归和 AC-01～AC-26 验收
