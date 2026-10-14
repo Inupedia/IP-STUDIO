@@ -145,6 +145,12 @@ IP Studio
 - 跨 IP 使用素材必须通过“**链接为共享资产**”，保留原始归属与许可说明，而不是复制后丢失来源。
 - 每个 IP 都可以设置 `default_style_version_id`，作品记录明确的冻结版本。
 
+### 3.2.1 IP 品牌模板工作台（P0）
+
+- 每个 IP 必须维护至少一个 BrandTemplate 草案并能批准版本；已批准的背景底色、Logo、纸张纹理、装饰、标题栏样式与位置、固定页脚必须锁定。
+- 只有 Brand Template Studio 能派生、编辑、预览、批准新版本；普通 Episode 编辑器只能修改标题文字与 EP 编号，不能拖动标题栏或其他外壳组件。
+- 同一 BrandTemplateVersion 在不同 Episode 中渲染固定外壳完全相同，内容格子布局和标题文字可不同。
+
 ### 3.3 资产中心（P0）
 
 资产分类：`character_reference`、`character_pose`、`expression`、`scene`、`background`、`prop`、`composite_panel`、`texture`、`other`。
@@ -333,6 +339,10 @@ flowchart TD
   W[Workspace] --> IP[IP]
   IP --> CV[Character / CharacterVersion]
   IP --> SV[Style / StyleVersion]
+  IP --> BT[BrandTemplate / BrandTemplateVersion]
+  IP --> LT[PanelLayoutTemplate]
+  BT --> P
+  LT --> P
   IP --> S[Series]
   S --> E[Episode]
   E --> P[Page]
@@ -344,7 +354,7 @@ flowchart TD
   AV --> EL
   CV --> EL
   SV --> E
-  E --> GT[ManualGenerationTask]
+  E --> GT[GenerationTask]
   GT --> AV
   E --> R[DocumentRevision]
   E --> EX[ExportJob]
@@ -646,64 +656,19 @@ packages/schema/             JSON 协议、OpenAPI 类型产物
 
 ---
 
-## 10. 开发拆分与实施顺序
+## 10. 开发拆分与实施顺序（Superpowers 正式计划）
 
-建议先建立可运行的端到端骨架，避免最后才集成画布和素材。
+**不要再以旧的 M0–M4 概述作为执行清单。** V1 正式任务以五份完整 implementation plan 为准；每份都包含精确路径、接口、TDD 步骤、运行命令、Review Focus 和提交边界。
 
-### M0：工程基线
+| 依赖顺序 | 阶段 | 正式计划文件 | 可独立验收的结果 |
+|---|---|---|---|
+| 01 | 工程基础与资产版本 | `docs/superpowers/plans/2026-10-14-01-foundation-and-asset-registry.md` | 工程可启动，多 IP 可隔离，图片安全入库与角色/风格冻结 |
+| 02 | 品牌模板与 PPT 式画布 | `docs/superpowers/plans/2026-10-14-02-brand-templates-and-canvas.md` | 固定品牌外壳、4/6/8 格、可编辑图层、保存/撤销 |
+| 03 | 剧本分镜与制作 | `docs/superpowers/plans/2026-10-14-03-storyboard-and-production.md` | 编写剧本、生成无字提示词、ChatGPT 人工回退、候选审核 |
+| 04 | Codex/ImageGen 集成 | `docs/superpowers/plans/2026-10-14-04-codex-imagegen-integration.md` | 真实能力 PoC、可用时自动生成、受限 Patch、不可用时降级 |
+| 05 | 导出与验收 | `docs/superpowers/plans/2026-10-14-05-export-and-acceptance.md` | PNG / ZIP / 元素级 PPTX、EP01/EP02 回归和 AC-01～AC-26 证明 |
 
-- [ ] Monorepo、Docker Compose、数据库迁移、文件目录/对象存储抽象。
-- [ ] 单管理员登录、OpenAPI、错误码、数据库和 Blob 备份脚本。
-- [ ] 定义 Document JSON Schema、Element discriminated union、资产引用规范。
-- **交付检查**：新环境一条命令启动；可保存/读取最小空工程。
-
-### M1：IP / Character / Style / Asset
-
-- [ ] IP CRUD；角色与画风 Bible 版本机制。
-- [ ] 资产上传/缩略图/SHA 去重/类型筛选/引用保护。
-- [ ] 角色表情、姿势、场景素材挂接，审核版本不可变。
-- **交付检查**：三角色定稿，创建画风标准库，任意资产可被稳定查找并复用。
-
-### M2：系列/分镜与 ChatGPT 桥接
-
-- [ ] Series / Episode / Page / Panel CRUD，结构化对白。
-- [ ] 提示词模板渲染、参考图包导出、人工生图任务记录。
-- [ ] 图片粘贴/拖拽、任务候选与批准、分镜引用。
-- **交付检查**：完成 EP01 的脚本、分镜和无字画格素材导入。
-
-### M3：PPT 式编辑器（最关键）
-
-- [ ] 页面和画格层级、图片层、文字层、气泡、聊天消息、形状。
-- [ ] 对象选择/变换/图层树/快捷键/裁切/Undo/Redo。
-- [ ] 保存、冲突、版本快照、画布预览、安全区/溢出告警。
-- **交付检查**：EP01 文字不乱码、聊天方向正确、可以不重新生图修改文字和排版。
-
-### M4：交付输出与正式验收
-
-- [ ] PNG 图组 + 工程 ZIP 导入/导出。
-- [ ] PPTX 原生形状/文字/图片分层导出与兼容性测试。
-- [ ] EP01、EP02 完整案例回归；26 项 AC 自动化/人工混合验收。
-- **交付检查**：作品可发布、可迁移、可再次编辑；不依赖付费图片 API。
-
-> 上述 M0–M4 是先后依赖关系，不是虚构的固定工期。M3 应尽早制作可点击原型，数据建模不要等到 UI 开发完成后再补。
-
-### 10.1 推荐的首批开发 Issues
-
-1. `feat(schema): define editable comic document and migration rules`
-2. `feat(storage): image upload metadata hashing and asset versioning`
-3. `feat(ip): character bible and immutable approved versions`
-4. `feat(ip): style bible and reference image sets`
-5. `feat(story): series episode page panel and manual script editor`
-6. `feat(prompt): chatgpt manual generation handoff with reference ZIP`
-7. `feat(editor): page manager and panel clipping layout`
-8. `feat(editor): selectable image text shape and layers panel`
-9. `feat(editor): speech bubbles and directional chat messages`
-10. `feat(editor): undo redo autosave conflict and revisions`
-11. `feat(export): png batch project backup and import validation`
-12. `feat(export): editable pptx element mapping and checks`
-13. `test(e2e): EP01 editing regression and EP02 asset reuse`
-
-每项 PR 至少提交：行为说明、接口/Schema 更新、单元测试（适用时）、UI 关键用例截图或录屏、回归检查清单。
+执行者必须先读 `AGENTS.md`、本 PRD、`docs/architecture/README.md` 和相应计划。不应在这一步生成 20 多个 GitHub Issue 或把所有任务放到同一个没有测试的超大 PR 中；保持可单独审查的任务粒度。
 
 ---
 
@@ -735,6 +700,9 @@ V1 的重要目标是**尽可能不新增生图 API 费用**，但不是承诺�
 
 - ChatGPT Images 生图、局部编辑与图片保存：https://help.openai.com/en/articles/11084440-images-in-chatgpt
 - ChatGPT 订阅与 API 分开计费：https://help.openai.com/en/articles/9039756-managing-billing-settings-on-chatgpt-web-and-platform
+- Codex 原生 ImageGen Skill（不同本机环境暴露情况需 PoC）：https://github.com/openai/skills/tree/main/skills/.system/imagegen
+- Codex App Server / 本地集成：https://github.com/openai/codex
+- Superpowers writing-plans：https://github.com/obra/superpowers/blob/main/skills/writing-plans/SKILL.md
 - Konva / React Canvas：https://konvajs.org/docs/react/index.html
 - Konva Canvas 撤销/重做：https://konvajs.org/docs/react/Undo-Redo.html
 - Konva 文本编辑（采用真实 DOM 输入框）：https://konvajs.org/docs/sandbox/Editable_Text.html
