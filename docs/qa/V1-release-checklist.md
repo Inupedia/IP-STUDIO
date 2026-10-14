@@ -6,6 +6,7 @@
 - [x] Playwright Chromium：16 条端到端流程通过，含 EP01/EP02、ChatGPT Web 手动回退、两个标签页 CAS、保存时继续编辑、异步创建期间锁定工作台、画布真实组拖动、10 页 PNG 与 30 图层回归。
 - [x] FastAPI pytest：95 项通过；API 测试数据库为临时 SQLite。
 - [x] Vite/TypeScript production build 通过；工作台/导出功能按需拆分加载。
+- [x] PR head `7bde8b0` 的完整本地 `bash scripts/verify-v1.sh`（FastAPI 95、Vitest 73、Playwright Chromium 16、production build）通过，终端日志已保存：[verify-v1-7bde8b0.log](evidence/verify-v1-7bde8b0.log)。
 - [x] PNG ZIP 浏览器路径检查 10 张实际渲染页的 1080×1440 尺寸与页序。
 - [x] PPTX 浏览器 XML 验收含多个独立图片/形状/中文文本对象；阶段 Task 3 使用 LibreOffice 打开/转换通过。
 - [x] `scripts/verify-v1.sh` 首个后端步骤失败时保留原始非零退出码（故障注入验证退出码 `37`）。

@@ -252,3 +252,4 @@
 - 远端验证：当前提交的 push 与 PR 两次 GitHub Actions API/web jobs 均通过，GitGuardian Security Checks 通过；记录见 [发布检查表](../../qa/V1-release-checklist.md)。
 - 发布状态：Draft PR #1 保持待审；AC-25、发布版本验证日志和生产配置检查仍未满足 release gate。
 - 后续探测记录：在临时 SQLite API 实例通过管理员端点发起一次真实探测；请求未返回报告，等待无响应后被人工中断，临时目录已清理且未留存事件/PNG。结果未知，不计入 AC-25 通过或失败证据；此前 PostgreSQL-backed API 探测仍为最后一条已完成结果。
+- 当前提交复验：在 `7bde8b0` 运行 `bash scripts/verify-v1.sh`，FastAPI 95、Vitest 73、Playwright Chromium 16 和 production build 全部通过；终端日志保存于 `docs/qa/evidence/verify-v1-7bde8b0.log`。本次后续提交只更新验证记录与终端日志，不改应用代码。
