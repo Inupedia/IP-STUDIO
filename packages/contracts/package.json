@@ -6,7 +6,8 @@
     "./domain": "./src/domain.ts",
     "./brand": "./src/brand.ts",
     "./layout": "./src/layout.ts",
-    "./canvas": "./src/canvas.ts"
+    "./canvas": "./src/canvas.ts",
+    "./script": "./src/script.ts"
   },
   "dependencies": {
     "zod": "^4.6.7"

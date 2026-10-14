@@ -4,6 +4,7 @@ from app.models.bibles import Character, CharacterVersion, Style, StyleVersion
 from app.models.documents import DocumentRevision, EpisodeDocument
 from app.models.ip import IP
 from app.models.story import Episode, Series
+from app.models.scripts import ScriptRevision
 from app.models.templates import BrandTemplate, BrandTemplateVersion
 from app.models.workspace import User, Workspace
 
@@ -22,6 +23,7 @@ __all__ = [
     "EpisodeDocument",
     "IP",
     "Series",
+    "ScriptRevision",
     "Style",
     "StyleVersion",
     "User",

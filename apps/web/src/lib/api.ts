@@ -14,6 +14,7 @@ import type {
   TokenResponse,
 } from '@ip-studio/contracts/domain';
 import type { CanvasDocumentV1, DocumentReadV1, DocumentRevisionReadV1 } from '@ip-studio/contracts/canvas';
+import type { ScriptMaterializationResultV1, ScriptRevisionReadV1, ScriptV1 } from '@ip-studio/contracts/script';
 
 const TOKEN_KEY = 'ip-studio-access-token';
 const AUTH_EXPIRED_EVENT = 'ip-studio:auth-expired';
@@ -44,6 +45,7 @@ export class ApiError extends Error {
   constructor(
     message: string,
     readonly status: number,
+    readonly detail?: unknown,
   ) {
     super(message);
     this.name = 'ApiError';
@@ -60,14 +62,18 @@ async function request<T>(path: string, init: RequestInit = {}, authenticated = 
   const response = await fetch(`${API_BASE_URL}${path}`, { ...init, headers });
   if (!response.ok) {
     let message = `请求失败（${response.status}）`;
+    let detail: unknown;
     try {
-      const body = (await response.json()) as { detail?: string };
-      if (body.detail) message = body.detail;
+      const body = (await response.json()) as { detail?: unknown };
+      detail = body.detail;
+      if (typeof body.detail === 'string') message = body.detail;
+      else if (typeof body.detail === 'object' && body.detail !== null && 'message' in body.detail
+        && typeof body.detail.message === 'string') message = body.detail.message;
     } catch {
       // Keep the status-based message when the server does not return JSON.
     }
     if (response.status === 401) expireAccessToken();
-    throw new ApiError(message, response.status);
+    throw new ApiError(message, response.status, detail);
   }
   if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
@@ -227,6 +233,42 @@ export const api = {
     return request(`/api/v1/episodes/${episodeId}/restore/${revisionNo}`, {
       method: 'POST',
       body: jsonBody({ base_revision: baseRevision }),
+    });
+  },
+
+  getEpisodeScripts(episodeId: string): Promise<ScriptRevisionReadV1[]> {
+    return request(`/api/v1/episodes/${episodeId}/scripts`);
+  },
+
+  getEpisodeScript(episodeId: string, revisionNo: number): Promise<ScriptRevisionReadV1> {
+    return request(`/api/v1/episodes/${episodeId}/scripts/${revisionNo}`);
+  },
+
+  saveEpisodeScript(
+    episodeId: string,
+    baseRevision: number,
+    script: ScriptV1,
+    sourceMarkdown?: string,
+    note?: string,
+  ): Promise<ScriptRevisionReadV1> {
+    return request(`/api/v1/episodes/${episodeId}/scripts`, {
+      method: 'POST',
+      body: jsonBody({ base_revision: baseRevision, script, source_markdown: sourceMarkdown, note }),
+    });
+  },
+
+  materializeScriptPanels(
+    episodeId: string,
+    revisionNo: number,
+    baseDocumentRevision: number,
+    confirmDialogueSync = false,
+  ): Promise<ScriptMaterializationResultV1> {
+    return request(`/api/v1/episodes/${episodeId}/scripts/${revisionNo}/materialize`, {
+      method: 'POST',
+      body: jsonBody({
+        base_document_revision: baseDocumentRevision,
+        confirm_dialogue_sync: confirmDialogueSync,
+      }),
     });
   },
 };

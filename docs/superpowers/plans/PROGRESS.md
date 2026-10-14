@@ -107,7 +107,19 @@
 
 ## 阶段 03：剧本分镜与生产
 
-- [ ] Task 1–4：见 `2026-10-14-03-storyboard-and-production.md`
+- [x] Task 1：剧本 Revision、场景、分镜持久化
+- [ ] Task 2：参考资产打包与无字提示词
+- [ ] Task 3：浏览器拖拽、粘贴与候选入库
+- [ ] Task 4：候选审核、替换单格与可复用素材
+
+#### Task 1 交付记录
+
+- 提交：`feat(story): add versioned scripts and storyboard`
+- RED 证据：新增服务端测试在实现前因剧本路由返回 404；前端测试因 `ScriptEditor` 不存在而无法解析导入。
+- GREEN 与回归：`uv run --project services/api pytest -v`（42 passed）；`pnpm --filter @ip-studio/web test`（25 passed）；`pnpm --filter @ip-studio/web build` 成功；`git diff --check` 通过。
+- 迁移验证：SQLite `0006_scripts` upgrade、`alembic check`（无新差异）、downgrade base、upgrade head 均通过。
+- 结果：Episode 剧本修订只追加；Markdown 与结构化场景分开保留；场景/对白/镜头卡保存角色版本、背景素材、镜头动作和无字提示；引用角色/背景必须同 IP 且已批准。对白差异先预览，用户确认后以新文档 revision 同步已有聊天消息/气泡文字；不改图片、品牌和其他图层。前端已提供剧本编辑、分镜卡列表和确认预览组件/API。
+- 限制：生产工作台导航和 Browser/Playwright 演示会在后续任务接入；PostgreSQL runtime smoke test 因当前环境无 Docker daemon / PostgreSQL 二进制未运行，SQLite API 与迁移全生命周期已验证。
 
 ## 阶段 04：Codex ImageGen 集成
 

@@ -37,13 +37,13 @@
 
 **Interfaces:**
 - Consumes: Phase 01 Series/Episode、Phase 02 CanvasDocumentV1
-- Produces: `create_script_revision(episode_id: UUID, script: dict) -> ScriptRevision`; `materialize_panels(episode_id: UUID, revision_id: UUID) -> list[Panel]`
+- Produces: `create_script_revision(episode_id: UUID, base_revision: int, script: ScriptV1) -> ScriptRevision`; `materialize_panels(episode_id: UUID, revision_no: int, base_document_revision: int, confirm_dialogue_sync: bool) -> ScriptMaterializationResult`
 
-- [ ] **Step 1: Write the failing test** — `test_script_revision_immutable / test_resync_requires_confirmation`；修改剧本创建新修订；有旧内容图层时需要确认才同步新的对白
-- [ ] **Step 2: Verify RED** — Run `cd services/api && uv run pytest tests/test_scripts.py -v && cd ../../ && pnpm --dir apps/web exec vitest run src/features/production/ScriptEditor.test.tsx`；expected **FAIL** for missing behavior, not missing dependencies.
-- [ ] **Step 3: Implement minimally** — 存储场景/角色/对话/镜头定义与 revision；提供人工文本编辑、分镜卡和变更预览
-- [ ] **Step 4: Verify GREEN** — Run `cd services/api && uv run pytest tests/test_scripts.py -v && cd ../../ && pnpm --dir apps/web exec vitest run src/features/production/ScriptEditor.test.tsx`；expected **PASS**. Also run relevant regression suite.
-- [ ] **Step 5: Commit** — `git add services/api/app apps/web/src/features/production services/api/tests/test_scripts.py && git commit -m "feat(story): add versioned scripts and storyboard"`.
+- [x] **Step 1: Write the failing test** — `test_scripts.py` 覆盖追加修订与旧版读取、对白同步确认、确认后仅更新对应消息/气泡对象，以及角色版本未批准/跨 IP 拒绝；`ScriptEditor.test.tsx` 覆盖结构化对白保存为新修订与画布同步差异预览。
+- [x] **Step 2: Verify RED** — 后端新路由实现前返回 404；前端因缺少 `ScriptEditor` 模块无法解析测试导入，均按预期 RED。
+- [x] **Step 3: Implement minimally** — 新增不可覆写的 ScriptRevision、1.0 TS/Python 结构契约、IP/批准引用校验和 revision API；分镜卡由固定脚本修订生成；剧本与画布内容分开存储，确认同步时仅改匹配的 chat_message/speech_bubble `props.text`，并沿用画布 CAS 保存。提供 Markdown/结构场景/对白/镜头编辑及差异确认 UI。
+- [x] **Step 4: Verify GREEN** — `uv run --project services/api pytest -v`（42 passed）；`pnpm --filter @ip-studio/web test`（25 passed）；`pnpm --filter @ip-studio/web build` 成功；`git diff --check` 通过。SQLite Alembic upgrade、`alembic check`（无差异）、downgrade base、upgrade head 全通过。PostgreSQL runtime smoke test 仍受 Docker/PostgreSQL 本地环境限制。
+- [x] **Step 5: Commit** — `feat(story): add versioned scripts and storyboard`。
 
 
 ### Task 2: 参考资产打包与无字提示词
