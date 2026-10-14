@@ -1,0 +1,34 @@
+# dependencies and build output
+node_modules/
+dist/
+build/
+coverage/
+.playwright/
+playwright-report/
+test-results/
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+*.pyc
+*.egg-info/
+
+# local environment and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+!.gitkeep
+
+# local asset objects and drafts
+data/
+uploads/
+tmp/
+*.sqlite3
+
+# tooling
+.DS_Store
+.idea/
+.vscode/
+.superpowers/
