@@ -9,6 +9,7 @@ export type CanvasCommand =
   | { type: 'replace_image'; element_id: string; asset_version_id: string }
   | { type: 'set_crop'; element_id: string; crop: { x: number; y: number; width: number; height: number } }
   | { type: 'set_transform'; element_id: string; transform: CanvasElementV1['transform'] }
+  | { type: 'set_transforms'; transforms: Array<{ element_id: string; transform: CanvasElementV1['transform'] }> }
   | { type: 'set_layout'; page_id: string; layout: LayoutTemplate }
   | { type: 'delete_element'; element_id: string }
   | { type: 'add_element'; panel_id: string; element: CanvasElementV1 };
@@ -115,6 +116,30 @@ export function applyCanvasCommand(document: CanvasDocumentV1, command: CanvasCo
             elements: panel.elements.map((candidate) => candidate.id === command.element_id
               ? { ...candidate, transform: command.transform }
               : candidate),
+          })),
+        })),
+      };
+      break;
+    }
+    case 'set_transforms': {
+      const selectedIds = new Set<string>();
+      for (const update of command.transforms) {
+        if (selectedIds.has(update.element_id)) throw new Error(`Canvas element ${update.element_id} is selected more than once`);
+        assertUnlocked(document, update.element_id);
+        selectedIds.add(update.element_id);
+      }
+      if (command.transforms.length < 2) throw new Error('Group transform requires at least two canvas elements');
+      const transforms = new Map(command.transforms.map((update) => [update.element_id, update.transform]));
+      next = {
+        ...document,
+        pages: document.pages.map((page) => ({
+          ...page,
+          panels: page.panels.map((panel) => ({
+            ...panel,
+            elements: panel.elements.map((candidate) => {
+              const transform = transforms.get(candidate.id);
+              return transform ? { ...candidate, transform } : candidate;
+            }),
           })),
         })),
       };

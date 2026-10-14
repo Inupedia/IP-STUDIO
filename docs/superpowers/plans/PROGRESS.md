@@ -195,7 +195,7 @@
 - [x] Task 1：原尺寸 PNG 多页导出
 - [x] Task 2：工程 ZIP 备份/恢复与完整性校验
 - [x] Task 3：原生对象 PPTX 导出
-- [ ] Task 4：EP01 / EP02 回归和 AC-01～AC-26 验收
+- [x] Task 4：EP01 / EP02 回归和 AC-01～AC-26 验收
 - [ ] Task 5：本地部署、备份/恢复与交接审核
 
 #### Task 1 交付记录
@@ -222,3 +222,11 @@
 - GREEN 与回归：PPTX 专项 7 passed；完整前端 `pnpm --filter @ip-studio/web test`（63 passed）；`pnpm --filter @ip-studio/web build` 成功；LibreOffice 将生成的 PPTX 作为 Impress 文档打开并成功导出 1 页 PDF；`git diff --check` 通过。
 - 结果：新增逐页纵向 PPTX 导出与画布对象映射，图片、文字、对话/思考气泡、聊天消息、形状、画格框和品牌外壳分别写入演示文稿。导出要求当前 revision 已保存，校验品牌尺寸及全部图片引用；气泡尾巴、图片裁切、字体换行/标题溢出和画格外元素可能近似时返回可见提示。
 - 边界：素材仍是独立位图对象，不承诺逐笔可编辑；PPTX 导出入口已挂在 `ComicEditor`，可从主应用导航打开的工作流留在 Task 4 接入。PostgreSQL runtime 受本机数据库服务不可用限制，PPTX 导出为纯前端功能。
+
+#### Task 4 交付记录
+
+- RED 观察：浏览器调试复现窄视口下画布被左侧页栏遮住；剧本输入回调还读到旧 React state。修复画布 overflow 对齐和事件值捕获后纳入 E2E/build 回归。
+- RED → GREEN 与回归：保存期间编辑的 E2E 先观察到页面误报“已保存”，加入 edit-version 检查后专项转绿。`bash scripts/verify-v1.sh`（FastAPI 94 passed、Vitest 66 passed、Playwright Chromium 8 passed、Vite/TypeScript build 成功）；EP02 验收截图见 [evidence/ep02-editor.png](../../qa/evidence/ep02-editor.png)。
+- 结果：串联 Series/Episode、剧本/分镜、ChatGPT Web 人工任务、候选审核、Canvas 保存/CAS/撤销和 PNG/PPTX 导出；画布提供多选与原子组变换、长中文溢出提示。EP01/EP02 对白方向及固定品牌版本均由 API 和浏览器回归覆盖。AC-01～26 逐项状态与复演入口见 [验收矩阵](../../qa/V1-acceptance-matrix.md)。
+- 恢复验证：本机 PostgreSQL 17.11 Alembic lifecycle 与真实 PostgreSQL + Blob 联合恢复通过；详情见 Stage05 Task5 Runbook。
+- 发布限制：AC-25 当前 Codex CLI provider 虽报告支持 ImageGen，但 API 管理员原生探测未返回成功事件/PNG，API 正确阻止未验证的 run；保持 `BLOCKED`，不把直接 CLI 旧证据算作 API 端通过。

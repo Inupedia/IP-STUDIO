@@ -94,11 +94,11 @@
 - Consumes: 所有已合并阶段 01–04；能创建真实 demo IP 与可再分发素材 fixture
 - Produces: `tests/e2e/ip-studio.spec.ts` 端到端流程；验收矩阵每项链接自动化或人工证据
 
-- [ ] **Step 1: Write the failing test** — `ep01_chat_direction_and_ep02_shared_brand_are_stable / generation_fallback_works`；EP01 左‘在吗？’右‘不在。’、模板一致、替换单格/改对白不改其它格、导出可打开
-- [ ] **Step 2: Verify RED** — Run `pnpm --dir apps/web exec playwright test tests/e2e/ip-studio.spec.ts && cd services/api && uv run pytest tests/test_acceptance_smoke.py -v`；expected **FAIL** for missing behavior, not missing dependencies.
-- [ ] **Step 3: Implement minimally** — 使用可共享占位素材搭建两期案例，跑浏览器及回读测试；逐条列 AC-01～AC-26 的 PASS/FAIL/BLOCKED 和可重现步骤；绝不虚报图片 API 测试
-- [ ] **Step 4: Verify GREEN** — Run `pnpm --dir apps/web exec playwright test tests/e2e/ip-studio.spec.ts && cd services/api && uv run pytest tests/test_acceptance_smoke.py -v`；expected **PASS**. Also run relevant regression suite.
-- [ ] **Step 5: Commit** — `git add tests/e2e docs/qa services/api/tests/test_acceptance_smoke.py && git commit -m "test(e2e): verify IP Studio V1 scenarios"`.
+- [x] **Step 1: Write the failing test** — 新增 `ep01_dialogue_direction_brand_stability_and_pptx / generation_fallback_works`，覆盖 EP01 左“在吗？”右“不在。”、跨期模板一致、定域编辑、保存刷新与 PPTX 独立对象；另覆盖手动生图候选入审。
+- [x] **Step 2: Verify RED** — E2E/验收回归作为新功能验收入口加入；开发期浏览器调试复现窄视口画布落到页栏下方的问题，并确认剧本输入回调会读到旧 React state，随后以修复和浏览器回归验证。
+- [x] **Step 3: Implement minimally** — 接入 Series/Episode/Canvas 工作流、多选/原子组变换、文本溢出提示、手动 ChatGPT 生图候选审核及多格式导出；建立 AC-01～AC-26 验收矩阵，外部 runtime 缺失项明确标 `BLOCKED`。
+- [x] **Step 4: Verify GREEN** — `bash scripts/verify-v1.sh` 全绿：后端 94 passed、前端 66 passed、Playwright 8 passed（包含保存中继续编辑回归）、Vite/TypeScript build 成功；保存 EP02 Playwright 截图。另 AC-18 真实 PostgreSQL + Blob 恢复通过；AC-25 服务端真实探测失败，仍是唯一发布阻断。
+- [x] **Step 5: Commit** — `git add tests/e2e docs/qa services/api/tests/test_acceptance_smoke.py && git commit -m "test(e2e): verify IP Studio V1 scenarios"`.
 
 
 ### Task 5: 本地部署、备份/恢复与交接审核
@@ -112,9 +112,10 @@
 - Consumes: 所有功能与 AC 验收报告
 - Produces: `scripts/verify-v1.sh` 统一执行可用的后端、前端和 E2E 测试，并返回准确 exit status；真实备份恢复说明
 
-- [ ] **Step 1: Write the failing test** — `verify-v1.sh exits_nonzero_when_backend_test_fails`；失败退出码非 0；备份数据库和资产及恢复可复演；最终发布无 fail 的阻断项
-- [ ] **Step 2: Verify RED** — Run `bash scripts/verify-v1.sh`；expected **FAIL** for missing behavior, not missing dependencies.
-- [ ] **Step 3: Implement minimally** — 整理安装、环境变量、DB/Blob 备份恢复演练和失败排查；跑完整测试，把真实结果附到 release checklist。不得将未开发阶段标记完成
-- [ ] **Step 4: Verify GREEN** — Run `bash scripts/verify-v1.sh`；expected **PASS**. Also run relevant regression suite.
+- [x] **Step 1: Write the failing test** — 脚本 failure-propagation 行为以临时 `uv` shim 注入 exit code `37` 验证；部署、备份/恢复与 release gate 的可复演条件写入对应 Runbook/Checklist。
+- [x] **Step 2: Verify RED** — 开发前 `scripts/verify-v1.sh` 不存在；新脚本故障注入后保留首个后端命令的原始退出码，不再继续执行后续步骤。
+- [x] **Step 3: Implement minimally** — 新增本地开发指南、PG + Blob 备份恢复步骤、完整验证脚本、Playwright 与 PostgreSQL migration CI；真实恢复和 API-owned Codex ImageGen 结果如实留在发布检查表。
+- [x] **Step 4: Verify GREEN** — `bash scripts/verify-v1.sh` 全绿（94 backend / 66 Vitest / 8 Chromium E2E / build）；CI YAML 与 Compose 配置解析通过；PostgreSQL 17.11 真实 migration lifecycle 与 DB/Blob restore 通过。当前只有 AC-25 原生服务端探测仍阻断发布。
+- [ ] **Release gate** — 验收矩阵不含 `BLOCKED` 项后方可视为最终发布完成；AC-25 当前仍 `BLOCKED`。
 - [ ] **Step 5: Commit** — `git add docs/deployment docs/qa/V1-release-checklist.md scripts/verify-v1.sh .github/workflows/ci.yml && git commit -m "docs(release): provide V1 verification and recovery runbooks"`.
 

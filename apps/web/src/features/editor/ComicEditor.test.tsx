@@ -115,4 +115,42 @@ describe('ComicEditor', () => {
     if (updatedChat?.type !== 'chat_message') throw new Error('Expected committed chat message');
     expect(updatedChat.props.text).toBe('在吗？（已修改）');
   });
+
+  it('adds one approved image layer without changing the existing panel positions', () => {
+    const onChange = vi.fn();
+    const assetVersionId = '10000000-0000-4000-8000-000000000099';
+    render(<ComicEditor
+      document={document}
+      brand={brand}
+      onChange={onChange}
+      availableAssets={[{
+        asset_id: '10000000-0000-4000-8000-000000000098',
+        asset_version_id: assetVersionId,
+        workspace_id: '10000000-0000-4000-8000-000000000002',
+        owner_ip_id: '10000000-0000-4000-8000-000000000003',
+        type: 'scene',
+        name: '背景参考',
+        status: 'approved',
+        version_no: 1,
+        sha256: 'abc',
+        mime: 'image/png',
+        byte_size: 68,
+        width: 800,
+        height: 600,
+        alpha: false,
+        created_at: '2026-10-14T00:00:00Z',
+      }]}
+    />);
+
+    fireEvent.click(screen.getByRole('button', { name: '＋ 添加已批准图片' }));
+
+    const updated = CanvasDocumentV1Schema.parse(onChange.mock.calls.at(-1)?.[0]);
+    const added = updated.pages[0].panels[0].elements.find((element) =>
+      (element.type === 'image' || element.type === 'sticker') && element.asset_version_id === assetVersionId,
+    );
+    expect(added?.type).toBe('image');
+    expect(updated.pages[0].panels[0].rect).toEqual(document.pages[0].panels[0].rect);
+    expect(updated.pages[0].panels[0].elements.filter((element) => element.type === 'chat_message'))
+      .toEqual(document.pages[0].panels[0].elements.filter((element) => element.type === 'chat_message'));
+  });
 });

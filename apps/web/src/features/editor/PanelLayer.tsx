@@ -39,12 +39,14 @@ function useImage(source: string | undefined): HTMLImageElement | undefined {
 interface ElementNodeProps {
   element: CanvasElementV1;
   assetSources: Record<string, string>;
-  onSelect: (id: string) => void;
+  onSelect: (id: string, additive?: boolean) => void;
   onEditText: (id: string) => void;
+  onDragStart: (id: string) => void;
+  onDragMove: (id: string, position: { x: number; y: number }) => void;
   onTransform: (id: string, transform: ElementTransform) => void;
 }
 
-function ElementNode({ element, assetSources, onSelect, onEditText, onTransform }: ElementNodeProps) {
+function ElementNode({ element, assetSources, onSelect, onEditText, onDragStart, onDragMove, onTransform }: ElementNodeProps) {
   const assetVersionId = 'asset_version_id' in element ? element.asset_version_id : undefined;
   const image = useImage(assetVersionId ? assetSources[assetVersionId] : undefined);
   const transform = element.transform;
@@ -75,8 +77,16 @@ function ElementNode({ element, assetSources, onSelect, onEditText, onTransform 
     opacity: element.opacity,
     draggable,
     listening: true,
-    onClick: () => onSelect(element.id),
+    onClick: (event: Konva.KonvaEventObject<MouseEvent>) => onSelect(
+      element.id,
+      event.evt.shiftKey || event.evt.metaKey || event.evt.ctrlKey,
+    ),
     onTap: () => onSelect(element.id),
+    onDragStart: () => onDragStart(element.id),
+    onDragMove: (event: Konva.KonvaEventObject<DragEvent>) => onDragMove(element.id, {
+      x: event.target.x(),
+      y: event.target.y(),
+    }),
     onDblClick: !element.locked && ['text', 'chat_message', 'speech_bubble', 'thought_bubble'].includes(element.type)
       ? () => onEditText(element.id)
       : undefined,
@@ -207,12 +217,16 @@ export function PanelLayer({
   assetSources,
   onSelect,
   onEditText,
+  onDragStart,
+  onDragMove,
   onTransform,
 }: {
   page: CanvasDocumentV1['pages'][number];
   assetSources: Record<string, string>;
-  onSelect: (id: string) => void;
+  onSelect: (id: string, additive?: boolean) => void;
   onEditText: (id: string) => void;
+  onDragStart: (id: string) => void;
+  onDragMove: (id: string, position: { x: number; y: number }) => void;
   onTransform: (id: string, transform: ElementTransform) => void;
 }) {
   return (
@@ -243,6 +257,8 @@ export function PanelLayer({
               assetSources={assetSources}
               onSelect={onSelect}
               onEditText={onEditText}
+              onDragStart={onDragStart}
+              onDragMove={onDragMove}
               onTransform={onTransform}
             />
           ))}
