@@ -19,6 +19,7 @@ from app.api.codex import router as codex_router
 from app.api.codex_runs import router as codex_runs_router
 from app.api.codex_patches import router as codex_patches_router
 from app.api.exports import router as exports_router
+from app.api.project_import import router as project_import_router
 from app.config import Settings
 from app.db import make_engine, make_session_factory
 from app.models import Base
@@ -98,6 +99,7 @@ def create_app(
     application.include_router(codex_runs_router)
     application.include_router(codex_patches_router)
     application.include_router(exports_router)
+    application.include_router(project_import_router)
     return application
 
 

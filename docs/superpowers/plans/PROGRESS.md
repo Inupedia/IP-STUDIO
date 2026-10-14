@@ -193,7 +193,7 @@
 ## 阶段 05：导出与验收
 
 - [x] Task 1：原尺寸 PNG 多页导出
-- [ ] Task 2：工程 ZIP 备份/恢复与完整性校验
+- [x] Task 2：工程 ZIP 备份/恢复与完整性校验
 - [ ] Task 3：原生对象 PPTX 导出
 - [ ] Task 4：EP01 / EP02 回归和 AC-01～AC-26 验收
 - [ ] Task 5：本地部署、备份/恢复与交接审核
@@ -206,3 +206,11 @@
 - 迁移验证：SQLite Alembic upgrade head、`alembic check`（无漂移）、downgrade base、再次 upgrade head 与 check 全部通过。
 - 结果：前端按页面 `order` 使用共享 Konva 品牌/内容图层生成原尺寸 PNG，显式加载全部引用素材，不包含参考线；API 按选定的不可变 document revision 校验页数、PNG 解码、尺寸与上限，按序打包 ZIP，持久化 SHA-256 工件和导出任务，并提供 workspace-scoped 元数据与下载端点。
 - 验收边界：前端单测以 mock Stage 校验尺寸、品牌传入和 `pixelRatio=1`；真实浏览器栅格与 EP01/EP02 外壳一致性留在 Task 4 E2E 实测。本机 PostgreSQL runtime 仍不可用，当前以 SQLite API 与迁移生命周期验证。
+
+#### Task 2 交付记录
+
+- RED 证据：bundle API 实现前往返测试因路由 404 失败；manifest 合同实现前因模块不存在无法导入，均为预期功能缺失。
+- GREEN 与回归：工程 ZIP 专项（12 passed）；完整后端 `uv run --project services/api pytest -q`（92 passed）；manifest 合同专项（3 passed）；完整前端/Contracts Vitest（55 passed）；Vite/TypeScript build 与 `git diff --check` 通过。
+- 结果：新增 revision-scoped 工程 ZIP 导出和管理员导入 API。包内含严格版本化 manifest、不可变文档快照和所有被文档/品牌/画风引用的批准素材；Blob 使用内容哈希路径。导入先检查 ZIP 路径/条目/大小、schema、引用集合、SHA-256、MIME、图片解码和尺寸，再于一个数据库事务中创建新系列/单集，并将跨 IP 的资产、品牌和画风版本映射到目标 IP。导入不覆盖已有项目，复制的批准快照记录当前管理员为批准人，并创建 AssetLink 固定引用。
+- 验收边界：覆盖 ZIP Slip、绝对路径、软链接、重复或多余条目、不支持的压缩方法、缺失/篡改 Blob、manifest/文档大小、解压尺寸上限及跨 IP 重映射；本任务未改数据库 schema，因此无需迁移。本机 PostgreSQL runtime 仍不可用，API 集成验证运行在 SQLite。
+- 提交：`feat(export): add verifiable editable project zip`。

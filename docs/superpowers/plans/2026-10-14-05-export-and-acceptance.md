@@ -49,19 +49,21 @@
 ### Task 2: 工程 ZIP 备份/恢复与完整性校验
 
 **Files:**
-- Create: `services/api/app/export/project_bundle.py; services/api/app/api/project_import.py`
+- Create: `services/api/app/export/project_bundle.py; services/api/app/api/project_import.py; services/api/app/schemas/project_bundle.py`
 - Create: `packages/contracts/src/project-manifest.ts`
+- Modify: `services/api/app/main.py; packages/contracts/package.json`
 - Test: `services/api/tests/test_project_bundle.py`
+- Test: `packages/contracts/src/project-manifest.test.ts`
 
 **Interfaces:**
 - Consumes: DocumentRevision 与所有引用的 AssetVersion/Blob
 - Produces: `export_project_bundle(episode_id: UUID, revision: int) -> bytes`; `import_project_bundle(payload: bytes) -> ImportResult`；manifest 保存 schema_version 与 blobs sha256
 
-- [ ] **Step 1: Write the failing test** — `test_zip_roundtrip_preserves_layers / test_missing_blob_rejected / test_zip_slip_rejected`；完整重导后标题/图层/版本引用不变；禁止 ../、绝对路径、符号链接和超尺寸 ZIP bomb
-- [ ] **Step 2: Verify RED** — Run `cd services/api && uv run pytest tests/test_project_bundle.py -v`；expected **FAIL** for missing behavior, not missing dependencies.
-- [ ] **Step 3: Implement minimally** — ZIP manifest + JSON 文档 + 引用原图与校验 hash，导入使用临时目录和事务，验证通过才持久化
-- [ ] **Step 4: Verify GREEN** — Run `cd services/api && uv run pytest tests/test_project_bundle.py -v`；expected **PASS**. Also run relevant regression suite.
-- [ ] **Step 5: Commit** — `git add services/api/app/export services/api/app/api/project_import.py services/api/tests/test_project_bundle.py packages/contracts/src/project-manifest.ts && git commit -m "feat(export): add verifiable editable project zip"`.
+- [x] **Step 1: Write the failing test** — 覆盖 ZIP 往返、缺失/篡改 Blob、跨 IP 版本映射、路径穿越、符号链接和 ZIP bomb；manifest 合同检查 hash 路径及版本一致性。
+- [x] **Step 2: Verify RED** — 首轮后端集成测试因 bundle 路由返回 404 而失败，manifest 合同因模块缺失而无法导入，均是预期缺失行为。
+- [x] **Step 3: Implement minimally** — ZIP manifest + JSON 文档 + 全部引用原图；导入严格校验、临时解压和 SHA-256 验证后才开启持久化事务；重映射跨 IP 资产/模板/画风版本，创建新系列与新单集，不覆盖现有项目。
+- [x] **Step 4: Verify GREEN** — 后端专项 `uv run --project services/api pytest -q services/api/tests/test_project_bundle.py`（12 passed）；完整后端 `uv run --project services/api pytest -q`（92 passed）；manifest 合同专项（3 passed）；完整前端/合同 Vitest（55 passed）；Vite/TypeScript build 与 `git diff --check` 通过。
+- [x] **Step 5: Commit** — `feat(export): add verifiable editable project zip`.
 
 
 ### Task 3: 原生对象 PPTX 导出
