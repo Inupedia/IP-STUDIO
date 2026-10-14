@@ -1,0 +1,25 @@
+# IP Studio V1 发布检查表
+
+## 验证结果（2026-10-14）
+
+- [x] 前端 Vitest：25 个文件，66 项通过。
+- [x] Playwright Chromium：8 条端到端流程通过，含 EP01/EP02、ChatGPT Web 手动回退、两个标签页 CAS、保存时继续编辑、10 页 PNG 与 30 图层回归。
+- [x] FastAPI pytest：94 项通过；API 测试数据库为临时 SQLite。
+- [x] Vite/TypeScript production build 通过；工作台/导出功能按需拆分加载。
+- [x] PNG ZIP 浏览器路径检查 10 张实际渲染页的 1080×1440 尺寸与页序。
+- [x] PPTX 浏览器 XML 验收含多个独立图片/形状/中文文本对象；阶段 Task 3 使用 LibreOffice 打开/转换通过。
+- [x] `scripts/verify-v1.sh` 首个后端步骤失败时保留原始非零退出码（故障注入验证退出码 `37`）。
+- [x] 保存 EP02 Playwright 验收截图：[evidence/ep02-editor.png](evidence/ep02-editor.png)。
+- [x] PostgreSQL 17.11 runtime migration upgrade/check/downgrade/upgrade/check，以及真实数据库 + Blob 联合恢复；管理员登录、图片读取和工程 ZIP 重导出均通过，见 AC-18。
+- [ ] GitHub Actions workflow 已配置 PostgreSQL 17 migration 生命周期和 Playwright；本轮尚未运行远端 Actions。
+- [ ] API-owned Codex 原生 ImageGen 探测与候选回流：已真实调用管理员 probe；provider 虽声明支持，但没有成功原生事件/PNG，API 因安全门禁拒绝 run，见 AC-25。
+
+## 阻断规则
+
+- [ ] 发布前 [V1-acceptance-matrix.md](V1-acceptance-matrix.md) 中没有 `BLOCKED` 项。
+- [x] 用真实 PostgreSQL 数据库与 `ASSET_STORAGE_DIR` Blob 目录执行一次备份/恢复，并确认登录、图片预览、工程 ZIP 再导出。
+- [ ] 从管理员界面显式运行 Codex ImageGen 能力探测，再启动任务；核实真实 PNG 自动成为 `pending_review` 候选，未经批准不得进入正式画布。
+- [ ] 对发布版本运行 `bash scripts/verify-v1.sh` 并保存终端日志。
+- [ ] 生产配置不使用 `.env.example` 中的本地测试密码；设置强 JWT secret、HTTPS 反向代理、防火墙和外部备份存储。
+
+**当前结论：V1 功能代码、SQLite/浏览器回归和 PostgreSQL/Blob 恢复演练已完成；发布只被 AC-25 阻断。**

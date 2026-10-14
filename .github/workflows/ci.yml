@@ -18,10 +18,28 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @ip-studio/web test
+      - run: pnpm --filter @ip-studio/web exec playwright install --with-deps chromium
+      - run: pnpm --filter @ip-studio/web test:e2e
       - run: pnpm --filter @ip-studio/web build
 
   api:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: ip_studio
+          POSTGRES_PASSWORD: ip_studio_ci_only
+          POSTGRES_DB: ip_studio
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ip_studio -d ip_studio"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql+psycopg://ip_studio:ip_studio_ci_only@localhost:5432/ip_studio
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
@@ -32,4 +50,9 @@ jobs:
         with:
           python-version: "3.12"
       - run: uv sync --project services/api --locked --group dev
-      - run: uv run --project services/api pytest -v
+      - run: uv run --project services/api alembic -c services/api/alembic.ini upgrade head
+      - run: uv run --project services/api alembic -c services/api/alembic.ini check
+      - run: uv run --project services/api alembic -c services/api/alembic.ini downgrade base
+      - run: uv run --project services/api alembic -c services/api/alembic.ini upgrade head
+      - run: uv run --project services/api alembic -c services/api/alembic.ini check
+      - run: uv run --project services/api pytest -q

@@ -117,5 +117,5 @@
 - [x] **Step 3: Implement minimally** — 新增本地开发指南、PG + Blob 备份恢复步骤、完整验证脚本、Playwright 与 PostgreSQL migration CI；真实恢复和 API-owned Codex ImageGen 结果如实留在发布检查表。
 - [x] **Step 4: Verify GREEN** — `bash scripts/verify-v1.sh` 全绿（94 backend / 66 Vitest / 8 Chromium E2E / build）；CI YAML 与 Compose 配置解析通过；PostgreSQL 17.11 真实 migration lifecycle 与 DB/Blob restore 通过。当前只有 AC-25 原生服务端探测仍阻断发布。
 - [ ] **Release gate** — 验收矩阵不含 `BLOCKED` 项后方可视为最终发布完成；AC-25 当前仍 `BLOCKED`。
-- [ ] **Step 5: Commit** — `git add docs/deployment docs/qa/V1-release-checklist.md scripts/verify-v1.sh .github/workflows/ci.yml && git commit -m "docs(release): provide V1 verification and recovery runbooks"`.
+- [x] **Step 5: Commit** — `git add docs/deployment docs/qa/V1-release-checklist.md scripts/verify-v1.sh .github/workflows/ci.yml && git commit -m "docs(release): provide V1 verification and recovery runbooks"`.
 

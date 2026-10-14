@@ -225,8 +225,17 @@
 
 #### Task 4 交付记录
 
+- 提交：`e15c86c test(e2e): verify IP Studio V1 scenarios`。
 - RED 观察：浏览器调试复现窄视口下画布被左侧页栏遮住；剧本输入回调还读到旧 React state。修复画布 overflow 对齐和事件值捕获后纳入 E2E/build 回归。
 - RED → GREEN 与回归：保存期间编辑的 E2E 先观察到页面误报“已保存”，加入 edit-version 检查后专项转绿。`bash scripts/verify-v1.sh`（FastAPI 94 passed、Vitest 66 passed、Playwright Chromium 8 passed、Vite/TypeScript build 成功）；EP02 验收截图见 [evidence/ep02-editor.png](../../qa/evidence/ep02-editor.png)。
 - 结果：串联 Series/Episode、剧本/分镜、ChatGPT Web 人工任务、候选审核、Canvas 保存/CAS/撤销和 PNG/PPTX 导出；画布提供多选与原子组变换、长中文溢出提示。EP01/EP02 对白方向及固定品牌版本均由 API 和浏览器回归覆盖。AC-01～26 逐项状态与复演入口见 [验收矩阵](../../qa/V1-acceptance-matrix.md)。
 - 恢复验证：本机 PostgreSQL 17.11 Alembic lifecycle 与真实 PostgreSQL + Blob 联合恢复通过；详情见 Stage05 Task5 Runbook。
 - 发布限制：AC-25 当前 Codex CLI provider 虽报告支持 ImageGen，但 API 管理员原生探测未返回成功事件/PNG，API 正确阻止未验证的 run；保持 `BLOCKED`，不把直接 CLI 旧证据算作 API 端通过。
+
+#### Task 5 交付记录
+
+- 提交：本条记录随 release/handoff commit 一同落地。
+- 结果：新增本地安装/启动指南、PostgreSQL + Blob 备份恢复 Runbook、`bash scripts/verify-v1.sh` 统一入口，以及 Playwright Chromium 和 PostgreSQL 17 migration CI。README 从“尚未实现”更新为当前代码与唯一发布阻断状态。
+- GREEN 与回归：验证入口完整运行通过（FastAPI 94、Vitest 66、Playwright 8、production build）；故障注入确认首个后端命令 exit code `37` 原样返回。CI YAML/Compose 配置解析通过；PG 17.11 upgrade/check/downgrade/upgrade/check 与真实数据库/Blob 恢复后登录、图片 byte match、工程 ZIP 再导出通过。
+- 真实能力边界：API 管理员 probe 调用当前 Codex CLI 后没有成功 ImageGen 事件/PNG；重试退出码为 `1`，API 未开放 native run，因此 AC-25 继续 `BLOCKED`。GitHub Actions 远端尚未运行；相关命令已由同一工作树的本地 verifier 和 PG runtime 复演。
+- 状态：交接材料与 CI 配置已落地；Stage05 Task5 / 最终 release gate 仍未完成，等 AC-25 原生探测与待审核候选回流成功后再勾选。
