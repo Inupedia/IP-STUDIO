@@ -1,11 +1,12 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { lazy, Suspense, useEffect, useState, type FormEvent } from 'react';
 import type { AdminProfile, IP } from '@ip-studio/contracts/domain';
 import { AssetLibrary } from './features/assets/AssetLibrary';
 import { BibleEditor } from './features/bibles/BibleEditor';
 import { IpList } from './features/ips/IpList';
 import { ApiError, api, authExpiredEvent, getAccessToken, setAccessToken } from './lib/api';
 
-type WorkspaceView = 'assets' | 'bibles';
+type WorkspaceView = 'assets' | 'bibles' | 'comics';
+const ComicWorkspace = lazy(() => import('./features/story/ComicWorkspace').then((module) => ({ default: module.ComicWorkspace })));
 
 function Brand() {
   return (
@@ -217,8 +218,21 @@ export default function App() {
                   >
                     角色与画风
                   </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={view === 'comics'}
+                    className={view === 'comics' ? 'is-active' : ''}
+                    onClick={() => setView('comics')}
+                  >
+                    漫画工作台
+                  </button>
                 </div>
-                {view === 'assets' ? (
+                {view === 'comics' ? (
+                  <Suspense fallback={<section className="loading-workspace" role="status">正在打开漫画工作台…</section>}>
+                    <ComicWorkspace key={selectedIp.id} ip={selectedIp} />
+                  </Suspense>
+                ) : view === 'assets' ? (
                   <AssetLibrary
                     api={api}
                     ips={ips}

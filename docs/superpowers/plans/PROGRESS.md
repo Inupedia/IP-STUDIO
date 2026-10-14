@@ -195,7 +195,7 @@
 - [x] Task 1：原尺寸 PNG 多页导出
 - [x] Task 2：工程 ZIP 备份/恢复与完整性校验
 - [x] Task 3：原生对象 PPTX 导出
-- [ ] Task 4：EP01 / EP02 回归和 AC-01～AC-26 验收
+- [x] Task 4：EP01 / EP02 回归和 AC-01～AC-26 验收
 - [ ] Task 5：本地部署、备份/恢复与交接审核
 
 #### Task 1 交付记录
@@ -222,3 +222,22 @@
 - GREEN 与回归：PPTX 专项 7 passed；完整前端 `pnpm --filter @ip-studio/web test`（63 passed）；`pnpm --filter @ip-studio/web build` 成功；LibreOffice 将生成的 PPTX 作为 Impress 文档打开并成功导出 1 页 PDF；`git diff --check` 通过。
 - 结果：新增逐页纵向 PPTX 导出与画布对象映射，图片、文字、对话/思考气泡、聊天消息、形状、画格框和品牌外壳分别写入演示文稿。导出要求当前 revision 已保存，校验品牌尺寸及全部图片引用；气泡尾巴、图片裁切、字体换行/标题溢出和画格外元素可能近似时返回可见提示。
 - 边界：素材仍是独立位图对象，不承诺逐笔可编辑；PPTX 导出入口已挂在 `ComicEditor`，可从主应用导航打开的工作流留在 Task 4 接入。PostgreSQL runtime 受本机数据库服务不可用限制，PPTX 导出为纯前端功能。
+
+#### Task 4 交付记录
+
+- 提交：`e15c86c test(e2e): verify IP Studio V1 scenarios`。
+- RED 观察：浏览器调试复现窄视口下画布被左侧页栏遮住；剧本输入回调还读到旧 React state。修复画布 overflow 对齐和事件值捕获后纳入 E2E/build 回归。
+- RED → GREEN 与回归：保存期间编辑的 E2E 先观察到页面误报“已保存”，加入 edit-version 检查后专项转绿。`bash scripts/verify-v1.sh`（FastAPI 94 passed、Vitest 66 passed、Playwright Chromium 8 passed、Vite/TypeScript build 成功）；EP02 验收截图见 [evidence/ep02-editor.png](../../qa/evidence/ep02-editor.png)。
+- 结果：串联 Series/Episode、剧本/分镜、ChatGPT Web 人工任务、候选审核、Canvas 保存/CAS/撤销和 PNG/PPTX 导出；画布提供多选与原子组变换、长中文溢出提示。EP01/EP02 对白方向及固定品牌版本均由 API 和浏览器回归覆盖。AC-01～26 逐项状态与复演入口见 [验收矩阵](../../qa/V1-acceptance-matrix.md)。
+- 恢复验证：本机 PostgreSQL 17.11 Alembic lifecycle 与真实 PostgreSQL + Blob 联合恢复通过；详情见 Stage05 Task5 Runbook。
+- 发布限制：AC-25 当前 Codex CLI provider 虽报告支持 ImageGen，但 API 管理员原生探测未返回成功事件/PNG，API 正确阻止未验证的 run；保持 `BLOCKED`，不把直接 CLI 旧证据算作 API 端通过。
+
+#### Task 5 交付记录
+
+- 提交：本条记录随 release/handoff commit 一同落地。
+- 结果：新增本地安装/启动指南、PostgreSQL + Blob 备份恢复 Runbook、`bash scripts/verify-v1.sh` 统一入口，以及 Playwright Chromium 和 PostgreSQL 17 migration CI。README 从“尚未实现”更新为当前代码状态和未完成的发布门槛。
+- GREEN 与回归：验证入口完整运行通过（FastAPI 94、Vitest 66、Playwright 8、production build）；故障注入确认首个后端命令 exit code `37` 原样返回。CI YAML/Compose 配置解析通过；PG 17.11 upgrade/check/downgrade/upgrade/check 与真实数据库/Blob 恢复后登录、图片 byte match、工程 ZIP 再导出通过。
+- 远端安全扫描 RED/GREEN：Draft PR #1 首次 GitGuardian 检出新增的固定 CI/测试凭据；改为每次测试进程随机生成验收 JWT/password，并将隔离 GitHub runner 的 Postgres 服务切换为 `trust` 且移除 DSN 密码。修复后的完整本地 verifier（94/66/8/build）与 workflow YAML 解析通过；最新 SHA 的远端复扫待运行。
+- 真实能力边界：API 管理员 probe 调用当前 Codex CLI 后没有成功 ImageGen 事件/PNG；重试退出码为 `1`，API 未开放 native run，因此 AC-25 继续 `BLOCKED`。GitHub Actions 远端尚未运行；相关命令已由同一工作树的本地 verifier 和 PG runtime 复演。
+- 外部兼容性证据：OpenAI 当前 [Sign in with ChatGPT preview limitations](https://developers.openai.com/siwc/token-sharing-open-source/preview-limitations) 将 ChatGPT-plan Codex App Server Responses 路径的 Image Generation 列为不支持。这与 AC-25 失败相符，但没有从 IP Studio 读取认证/transport 状态，因此根因仍标为推断；不通过私有接口、Cookie 或开发者 API 绕过门禁。
+- 状态：交接材料与 CI 配置已落地；Stage05 Task5 / 最终 release gate 仍未完成。除 AC-25 原生探测与待审核候选回流外，远端 GitHub Actions、发布版本验证日志和生产配置检查也待完成。

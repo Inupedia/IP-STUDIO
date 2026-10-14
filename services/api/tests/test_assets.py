@@ -57,6 +57,22 @@ def upload(client: TestClient, ip_id: str, content: bytes, mime: str = "image/pn
     )
 
 
+def test_three_ips_keep_their_uploaded_assets_separate(client: TestClient) -> None:
+    ip_ids = [create_ip(client, code) for code in ("KAZI", "PULU", "LING")]
+    uploaded = [
+        upload(client, ip_id, image_bytes(size=(index + 2, 2)), name=f"ip-{index}.png")
+        for index, ip_id in enumerate(ip_ids)
+    ]
+
+    assert all(response.status_code == 201 for response in uploaded)
+    for index, ip_id in enumerate(ip_ids):
+        assets = client.get("/api/v1/assets", params={"ip_id": ip_id})
+        assert assets.status_code == 200
+        assert len(assets.json()) == 1
+        assert assets.json()[0]["owner_ip_id"] == ip_id
+        assert assets.json()[0]["name"] == f"ip-{index}.png"
+
+
 def test_reject_fake_png(client: TestClient) -> None:
     response = upload(client, create_ip(client), b"<html>not a png</html>")
 

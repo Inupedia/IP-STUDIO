@@ -62,4 +62,35 @@ describe('canvas commands and document history', () => {
       transform: { x: 1, y: 1, width: 10, height: 10, rotation: 0 },
     })).toThrow(/locked/i);
   });
+
+  it('moves a selected group with one history step', () => {
+    const groupDocument = CanvasDocumentV1Schema.parse({
+      ...initialDocument,
+      pages: initialDocument.pages.map((page) => ({
+        ...page,
+        panels: page.panels.map((panel) => ({
+          ...panel,
+          elements: panel.elements.map((element) => element.id === imageElementId
+            ? { ...element, locked: false }
+            : element),
+        })),
+      })),
+    });
+    const image = groupDocument.pages[0].panels[0].elements.find((element) => element.id === imageElementId)!;
+    const chat = groupDocument.pages[0].panels[0].elements.find((element) => element.id === chatElementId)!;
+    const store = createDocumentStore(groupDocument);
+    store.getState().dispatch({
+      type: 'set_transforms',
+      transforms: [
+        { element_id: image.id, transform: { ...image.transform, x: image.transform.x + 20, y: image.transform.y + 10 } },
+        { element_id: chat.id, transform: { ...chat.transform, x: chat.transform.x + 20, y: chat.transform.y + 10 } },
+      ],
+    });
+
+    const moved = store.getState().document.pages[0].panels[0].elements;
+    expect(moved.find((element) => element.id === image.id)?.transform.x).toBe(image.transform.x + 20);
+    expect(moved.find((element) => element.id === chat.id)?.transform.y).toBe(chat.transform.y + 10);
+    store.getState().undo();
+    expect(store.getState().document).toEqual(groupDocument);
+  });
 });

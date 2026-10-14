@@ -5,6 +5,7 @@ import { api } from '../../lib/api';
 export interface CandidateReviewProps {
   ipId: string;
   onReviewed?: () => void;
+  refreshKey?: number;
 }
 
 const statusLabels: Record<GenerationCandidateV1['status'], string> = {
@@ -13,7 +14,7 @@ const statusLabels: Record<GenerationCandidateV1['status'], string> = {
   rejected: '已拒绝',
 };
 
-export function CandidateReview({ ipId, onReviewed }: CandidateReviewProps) {
+export function CandidateReview({ ipId, onReviewed, refreshKey = 0 }: CandidateReviewProps) {
   const [candidates, setCandidates] = useState<GenerationCandidateV1[]>([]);
   const [previews, setPreviews] = useState<Record<string, string>>({});
   const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
@@ -36,7 +37,7 @@ export function CandidateReview({ ipId, onReviewed }: CandidateReviewProps) {
         if (active) setLoading(false);
       });
     return () => { active = false; };
-  }, [ipId]);
+  }, [ipId, refreshKey]);
 
   useEffect(() => {
     let active = true;

@@ -152,7 +152,10 @@ export function ScriptEditor({ revisionNo, sourceMarkdown, script, onSave, savin
           aria-label="分集标题"
           maxLength={200}
           value={draft.title}
-          onChange={(event) => setDraft((current) => ({ ...current, title: event.currentTarget.value }))}
+          onChange={(event) => {
+            const title = event.currentTarget.value;
+            setDraft((current) => ({ ...current, title }));
+          }}
         />
       </label>
       <label>
@@ -162,7 +165,10 @@ export function ScriptEditor({ revisionNo, sourceMarkdown, script, onSave, savin
           rows={2}
           maxLength={4000}
           value={draft.summary}
-          onChange={(event) => setDraft((current) => ({ ...current, summary: event.currentTarget.value }))}
+          onChange={(event) => {
+            const summary = event.currentTarget.value;
+            setDraft((current) => ({ ...current, summary }));
+          }}
         />
       </label>
       <label>
