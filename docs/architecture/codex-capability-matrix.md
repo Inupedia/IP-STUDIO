@@ -11,14 +11,16 @@ reports `available`.
 | Codex CLI installed | Yes | Stable CLI: `/opt/homebrew/bin/codex`, `codex-cli 0.162.1`; this is the latest stable release reported by the [official release page](https://github.com/openai/codex/releases). |
 | Codex desktop app | Up to date | Codex app update check reported production version `26.1007.71326`, status `up_to_date`. |
 | Desktop-bundled Codex CLI | Yes | `/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex`, `codex-cli 0.162.0-alpha.17.2`. |
-| Codex login | Yes | Both installed CLIs reported `Logged in using ChatGPT`; no token or cookie was read by IP Studio. |
-| Local App Server | Yes | Both CLIs initialized `codex app-server --listen stdio://` and answered `modelProvider/capabilities/read`. |
-| Provider advertises ImageGen | Yes | Both App Servers reported `imageGeneration: true`; this is only capability advertisement, not successful inference. |
+| Cursor extension Codex CLI | Yes | `/Users/inupedia/.cursor/extensions/openai.chatgpt-26.908.40401-darwin-arm64/bin/macos-aarch64/codex`, `codex-cli 0.154.0-alpha.6.2`. |
+| Codex login | Yes | Homebrew stable, desktop-bundled, and Cursor-bundled CLIs reported `Logged in using ChatGPT`; no token or cookie was read by IP Studio. |
+| Local App Server | Yes | All three distinct CLIs initialized `codex app-server --listen stdio://` and answered `modelProvider/capabilities/read`. |
+| Provider advertises ImageGen | Yes | All three App Servers reported `imageGeneration: true`; this is only capability advertisement, not successful inference. |
 | Real native ImageGen output | Yes, for this local Codex session | An explicit `codex exec` call invoked native ImageGen, saved a PNG in the Codex-generated output directory, and copied it to `/tmp/ip-studio-imagegen-probe/probe.png` |
 | PNG integrity | Passed | `file` identified PNG; Pillow `Image.verify()` and a full decode succeeded; 1254×1254 RGB, 1,627,707 bytes |
 | IP Studio API-owned administrator probe (2026-10-14, PostgreSQL) | `unavailable` | Authenticated FastAPI requests confirmed `imageGeneration: true`, but the CLI did not record a successful native ImageGen event or bounded PNG; one retry exited `1`. The API correctly refused to mark the capability available, so no native run or candidate was created. |
 | Follow-up isolated API probe (2026-10-14, SQLite) | Inconclusive | The authenticated request did not return a report and was manually interrupted. Its temporary directory was cleaned up; no event log or PNG was retained for verification. This attempt changes neither the earlier API result nor AC-25. |
 | Desktop-bundled CLI API probe (2026-10-15, SQLite) | `unavailable` | The authenticated `POST /api/v1/codex/capabilities/probe` returned `Codex ImageGen 探测超时。` with CLI `0.162.0-alpha.17.2`, `image_generation_advertised: true`, `e2e_verified: false`; no verified path was cached and no run/candidate was created. Sanitized response: [evidence JSON](../qa/evidence/codex-bundled-runtime-probe-2026-10-15.json). |
+| Configured Cursor CLI API probe (2026-10-15, SQLite) | `unavailable` | `IP_STUDIO_CODEX_IMAGEGEN_EXECUTABLE` selected the independent `0.154.0-alpha.6.2` binary. The authenticated API returned exit code `1`; no native result passed validation, no path was cached, and no run/candidate was created. [Evidence JSON](../qa/evidence/codex-configured-runtime-probe-2026-10-15.json). |
 | ChatGPT Web fallback | Always enabled | Existing manual task, prompt/reference ZIP, and browser upload path remain independent of the Codex probe |
 
 The first CLI attempt was rejected because the temporary directory was outside a trusted Git
@@ -62,11 +64,18 @@ availability is unrelated to this capability check.
 
 ## Alternate local runtime check (2026-10-15)
 
-The host exposes two Codex executables: Homebrew stable `0.162.1` and the ChatGPT desktop-bundled
-`0.162.0-alpha.17.2`. Both authenticate as ChatGPT-plan users, both advertise ImageGen, and the
-bundled binary's API-owned probe timed out. The desktop app itself is up to date. The [current
+The host exposes four Codex executables: Homebrew stable `0.162.1`, the ChatGPT desktop-bundled
+`0.162.0-alpha.17.2`, the Cursor extension-bundled `0.154.0-alpha.6.2`, and the wrapper that
+resolves to the desktop-bundled binary. The distinct binaries authenticate as ChatGPT-plan users
+and advertise ImageGen, but their API-owned probes did not pass (timeout or exit code `1`). The
+desktop app itself is up to date. The [current
 ChatGPT-plan compatibility limits](https://developers.openai.com/siwc/token-sharing-open-source/preview-limitations)
 say Image Generation is unsupported through Codex App Server's Responses path. No installed,
 policy-compliant runtime on this host can currently satisfy AC-25. A future runtime must pass the
 same API-owned native event + PNG validation; do not switch to the paid Images/Responses API,
 private endpoints, or browser credentials.
+
+The API can select an operator-provided absolute CLI path using
+`IP_STUDIO_CODEX_IMAGEGEN_EXECUTABLE`. An invalid configured path returns `unavailable` without
+falling back to another executable found on `PATH`; a valid path is still gated by the real native
+ImageGen event and decoded PNG checks.

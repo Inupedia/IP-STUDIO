@@ -99,3 +99,19 @@
 - [x] **Step 4: Verify GREEN** — `uv run --project services/api pytest -q`（77 passed）；`pnpm --filter @ip-studio/web test`（48 passed）；Contracts 专项 8 passed；Vite/TypeScript build 成功；SQLite Alembic downgrade base、upgrade head、`alembic check` 均通过；`git diff --check` 通过。
 - [x] **Step 5: Commit** — `feat(codex): approve scoped edits with reliable fallback`。
 
+
+### Runtime-selection follow-up: explicit ImageGen executable path
+
+**Goal:** Let an API deployment select its intended local Codex CLI even when that binary is not on the API process `PATH`, without weakening AC-25's real-generation gate.
+
+**Files:**
+- Update: `services/api/app/config.py; services/api/app/main.py; services/api/app/codex/capabilities.py`
+- Update: `services/api/app/api/codex.py; services/api/app/api/codex_runs.py; .env.example`
+- Test: `services/api/tests/test_codex_capabilities.py`
+
+- [x] **Step 1: Write failing tests** — verify environment loading, configured absolute path precedence, invalid path rejection without PATH fallback, and propagation through capability/run gates.
+- [x] **Step 2: Verify RED** — new tests failed on the missing configured-path parameter and app setting.
+- [x] **Step 3: Implement minimally** — add the operator-only `IP_STUDIO_CODEX_IMAGEGEN_EXECUTABLE` setting; resolve and validate the absolute executable path; pass it through capability and run verification. Invalid configuration reports unavailable and never falls back to another CLI. Browser/API request payloads cannot supply executable paths.
+- [x] **Step 4: Verify GREEN** — capability/Codex-run/Patch-proposal tests passed (20); full `bash scripts/verify-v1.sh` passed (FastAPI 98, Vitest 73, Playwright Chromium 16, production build). API-owned SQLite probe of Cursor CLI `0.154.0-alpha.6.2` returned exit code `1`, so it did not pass the native event + PNG gate and no runtime was cached.
+- [ ] **Step 5: Commit and remote verification** — commit the runtime-selection implementation and evidence; require PR CI to pass. AC-25 remains blocked until a compatible runtime passes API-owned native ImageGen and candidate return/approval.
+

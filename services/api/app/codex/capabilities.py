@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import queue
 import shutil
 import subprocess
@@ -245,6 +246,7 @@ def run_image_generation_probe(
 
 def probe_capabilities(
     *,
+    configured_codex_path: Path | str | None = None,
     executable_lookup: ExecutableLookup | None = None,
     command_runner: CommandRunner | None = None,
     app_server_probe: AppServerProbe | None = None,
@@ -256,7 +258,26 @@ def probe_capabilities(
     run = command_runner or subprocess.run
     app_probe = app_server_probe or _read_app_server_capabilities
     checked_at = datetime.now(timezone.utc)
-    codex_path = lookup("codex")
+    if configured_codex_path is not None:
+        configured_path = Path(configured_codex_path).expanduser()
+        if (
+            not configured_path.is_absolute()
+            or not configured_path.is_file()
+            or not os.access(configured_path, os.X_OK)
+        ):
+            return CapabilityReport(
+                status="unavailable",
+                reason="配置的 Codex ImageGen 可执行文件不可用；请检查绝对路径和执行权限。",
+                codex_path=None,
+                codex_version=None,
+                app_server_available=False,
+                image_generation_advertised=False,
+                e2e_verified=False,
+                checked_at=checked_at,
+            )
+        codex_path = str(configured_path.resolve())
+    else:
+        codex_path = lookup("codex")
     version: str | None = None
 
     if codex_path is None:

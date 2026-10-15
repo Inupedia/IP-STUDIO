@@ -254,3 +254,11 @@
 - 后续探测记录：在临时 SQLite API 实例通过管理员端点发起一次真实探测；请求未返回报告，等待无响应后被人工中断，临时目录已清理且未留存事件/PNG。结果未知，不计入 AC-25 通过或失败证据；此前 PostgreSQL-backed API 探测仍为最后一条已完成结果。
 - 当前提交复验：在 `7bde8b0` 运行 `bash scripts/verify-v1.sh`，FastAPI 95、Vitest 73、Playwright Chromium 16 和 production build 全部通过；终端日志保存于 `docs/qa/evidence/verify-v1-7bde8b0.log`。本次后续提交只更新验证记录与终端日志，不改应用代码。
 - 兼容运行时检查（2026-10-15）：Homebrew CLI `0.162.1` 是本机稳定版；Codex 桌面应用报告 up to date，但其捆绑 CLI 是 `0.162.0-alpha.17.2`。两者均以 ChatGPT 登录并声明 ImageGen；将桌面捆绑 CLI 通过临时 PATH 交给管理员 API probe 后明确超时（`e2e_verified=false`），API 未缓存能力且未创建 run/candidate。官方 ChatGPT-plan App Server 限制明确不支持 Image Generation。证据见 `docs/qa/evidence/codex-bundled-runtime-probe-2026-10-15.json`；当前主机没有满足 AC-25 的兼容运行时，PR 继续 Draft。
+
+### AC-25 runtime path follow-up（2026-10-15）
+
+- RED → GREEN：先新增环境变量读取、显式绝对路径优先级、无效路径不得退回 PATH、管理员路由传播配置路径测试；初次失败 4 项均因配置接口尚未实现。实现后能力专测 11 passed；能力、Codex run 与 Patch proposal 相关测试共 20 passed。
+- 实现：API 支持部署变量 `IP_STUDIO_CODEX_IMAGEGEN_EXECUTABLE`（本机路径示例应填实际 `codex` binary），并将选择应用到只读能力检查、管理员真实 probe 和 run 前复核。无效或相对路径返回 `unavailable`；网页请求不能传入任意 binary 路径。实际通过的 path/version 仍绑定 E2E 缓存。
+- 真实验收：配置该变量指向 Cursor 扩展内 `/Users/inupedia/.cursor/extensions/openai.chatgpt-26.908.40401-darwin-arm64/bin/macos-aarch64/codex`（`0.154.0-alpha.6.2`），管理员调用 `POST /api/v1/codex/capabilities/probe` 返回 HTTP 200、ImageGen advertised、命令 exit code `1`、`e2e_verified=false`。未缓存 runtime，也未产生 run/candidate。证据见 [configured runtime probe](../../qa/evidence/codex-configured-runtime-probe-2026-10-15.json)。
+- 完整验证：`bash scripts/verify-v1.sh` 通过：FastAPI 98 passed、Vitest 73 passed、Playwright Chromium 16 passed、production build 成功。
+- 状态：路径配置实现已具备；Homebrew、桌面捆绑和 Cursor 捆绑 runtime 均未通过 E2E gate。AC-25 保持 `BLOCKED`，仍需实际兼容的可执行文件/host 通过管理员 PNG 探测并完成候选审核回流；不以 environment override 本身清除产品门槛。

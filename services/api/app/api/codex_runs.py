@@ -69,6 +69,7 @@ def start_codex_run(
     verified_path = request.app.state.codex_imagegen_verified_path
     verified_version = request.app.state.codex_imagegen_verified_version
     report = probe_capabilities(
+        configured_codex_path=request.app.state.codex_imagegen_executable_path,
         e2e_verified=bool(verified_path and verified_version),
         verified_codex_path=verified_path,
         verified_codex_version=verified_version,

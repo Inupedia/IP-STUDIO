@@ -11,6 +11,7 @@ from app.codex.capabilities import (
     probe_capabilities,
     run_image_generation_probe,
 )
+from app.config import Settings
 from app.main import create_app
 from fastapi.testclient import TestClient
 from app.storage.local_blobs import ImageInfo
@@ -19,6 +20,14 @@ from datetime import datetime, timezone
 TEST_EMAIL = "codex-admin@example.test"
 TEST_PASSWORD = "test-password-long-enough"
 TEST_SECRET = "test-signing-secret-with-at-least-thirty-two-bytes"
+
+
+def test_settings_read_configured_imagegen_executable(monkeypatch) -> None:
+    monkeypatch.setenv("IP_STUDIO_CODEX_IMAGEGEN_EXECUTABLE", "/opt/codex-imagegen/codex")
+
+    settings = Settings(_env_file=None)
+
+    assert settings.codex_imagegen_executable_path == Path("/opt/codex-imagegen/codex")
 
 
 def png_bytes() -> bytes:
@@ -34,6 +43,42 @@ def test_missing_codex_reports_unavailable() -> None:
     assert "Codex CLI" in report.reason
     assert report.codex_path is None
     assert report.image_generation_advertised is False
+
+
+def test_configured_codex_path_takes_precedence_over_path_lookup(tmp_path) -> None:
+    executable = tmp_path / "codex"
+    executable.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    executable.chmod(0o755)
+    lookup_calls: list[str] = []
+
+    def command_runner(args: list[str], **_kwargs: object) -> SimpleNamespace:
+        if "login" in args:
+            return SimpleNamespace(returncode=0, stdout="Logged in using ChatGPT", stderr="")
+        return SimpleNamespace(returncode=0, stdout="codex-cli 0.163.0", stderr="")
+
+    report = probe_capabilities(
+        configured_codex_path=executable,
+        executable_lookup=lambda name: lookup_calls.append(name) or "/opt/homebrew/bin/codex",
+        command_runner=command_runner,
+        app_server_probe=lambda _path: {"imageGeneration": True},
+    )
+
+    assert report.codex_path == str(executable.resolve())
+    assert report.codex_version == "codex-cli 0.163.0"
+    assert lookup_calls == []
+
+
+def test_invalid_configured_codex_path_does_not_fall_back_to_path(tmp_path) -> None:
+    lookup_calls: list[str] = []
+    report = probe_capabilities(
+        configured_codex_path=tmp_path / "missing-codex",
+        executable_lookup=lambda name: lookup_calls.append(name) or "/opt/homebrew/bin/codex",
+    )
+
+    assert report.status == "unavailable"
+    assert report.codex_path is None
+    assert "配置的 Codex ImageGen 可执行文件不可用" in report.reason
+    assert lookup_calls == []
 
 
 def test_skill_present_but_imagegen_unavailable() -> None:
@@ -171,6 +216,7 @@ def test_image_file_without_native_generation_event_is_rejected(tmp_path) -> Non
 def test_capability_endpoint_is_admin_only_and_does_not_trigger_image_generation(
     tmp_path, monkeypatch
 ) -> None:
+    configured_executable = tmp_path / "codex"
     application = create_app(
         database_url=f"sqlite:///{tmp_path / 'codex-capabilities.db'}",
         jwt_secret_key=TEST_SECRET,
@@ -178,6 +224,7 @@ def test_capability_endpoint_is_admin_only_and_does_not_trigger_image_generation
         bootstrap_admin_password=TEST_PASSWORD,
         initialize_schema=True,
         asset_storage_dir=tmp_path / "blobs",
+        codex_imagegen_executable_path=configured_executable,
     )
     called: list[dict[str, object]] = []
 
@@ -209,6 +256,7 @@ def test_capability_endpoint_is_admin_only_and_does_not_trigger_image_generation
     assert report.status_code == 200
     assert report.json()["status"] == "unavailable"
     assert called == [{
+        "configured_codex_path": configured_executable,
         "e2e_verified": False,
         "verified_codex_path": None,
         "verified_codex_version": None,
@@ -216,6 +264,7 @@ def test_capability_endpoint_is_admin_only_and_does_not_trigger_image_generation
 
 
 def test_explicit_probe_endpoint_runs_e2e_and_caches_only_validated_result(tmp_path, monkeypatch) -> None:
+    configured_executable = tmp_path / "codex"
     application = create_app(
         database_url=f"sqlite:///{tmp_path / 'codex-e2e-probe.db'}",
         jwt_secret_key=TEST_SECRET,
@@ -223,6 +272,7 @@ def test_explicit_probe_endpoint_runs_e2e_and_caches_only_validated_result(tmp_p
         bootstrap_admin_password=TEST_PASSWORD,
         initialize_schema=True,
         asset_storage_dir=tmp_path / "blobs",
+        codex_imagegen_executable_path=configured_executable,
     )
     base_report = CapabilityReport(
         status="unavailable",
@@ -237,6 +287,7 @@ def test_explicit_probe_endpoint_runs_e2e_and_caches_only_validated_result(tmp_p
     probe_calls: list[str] = []
 
     def fake_probe(**kwargs: object) -> CapabilityReport:
+        assert kwargs["configured_codex_path"] == configured_executable
         verified = kwargs.get("e2e_verified") is True
         return base_report.model_copy(update={
             "status": "available" if verified else "unavailable",

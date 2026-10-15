@@ -13,7 +13,7 @@
 - [x] 保存 EP02 Playwright 验收截图：[evidence/ep02-editor.png](evidence/ep02-editor.png)。
 - [x] PostgreSQL 17.11 runtime migration upgrade/check/downgrade/upgrade/check，以及真实数据库 + Blob 联合恢复；管理员登录、图片读取和工程 ZIP 重导出均通过，见 AC-18。
 - [x] GitHub Actions 的 PostgreSQL 17 migration、API 与 Playwright web jobs 已在当前提交通过：[push run](https://github.com/Inupedia/IP-STUDIO/actions/runs/38571567297)、[PR run](https://github.com/Inupedia/IP-STUDIO/actions/runs/38571574764)；GitGuardian Security Checks 通过。
-- [ ] API-owned Codex 原生 ImageGen 探测与候选回流：Homebrew 稳定 CLI 与桌面包内 CLI 均未通过管理员 probe；后者超时，见 AC-25 和[运行时探测证据](evidence/codex-bundled-runtime-probe-2026-10-15.json)。OpenAI 当前 ChatGPT-plan App Server 文档将 Image Generation 列为不支持；在合规兼容运行时通过同一 E2E 门禁前不得勾选。
+- [ ] API-owned Codex 原生 ImageGen 探测与候选回流：Homebrew 稳定 CLI、桌面包内 CLI 和 Cursor 扩展 CLI 均未通过管理员 probe；后两者分别超时和 exit code `1`。证据见 AC-25、[桌面 CLI 探测](evidence/codex-bundled-runtime-probe-2026-10-15.json)及[配置路径探测](evidence/codex-configured-runtime-probe-2026-10-15.json)。OpenAI 当前 ChatGPT-plan App Server 文档将 Image Generation 列为不支持；在合规兼容运行时通过同一 E2E 门禁前不得勾选。
 
 ## 阻断规则
 
