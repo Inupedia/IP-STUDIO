@@ -45,18 +45,34 @@ it is inconclusive. The desktop-bundled CLI also timed out through the same API-
 result changes AC-25; keep ChatGPT Web manual generation available while no compatible runtime is
 available.
 
-## ChatGPT-plan compatibility finding (2026-10-14)
+## ChatGPT-plan compatibility finding (researched 2026-10-15)
 
 OpenAI's [Sign in with ChatGPT preview limitations](https://developers.openai.com/siwc/token-sharing-open-source/preview-limitations)
-state that Image Generation is unsupported for ChatGPT-plan usage through the Responses API,
-including requests made through Codex App Server. This is consistent with the API-owned probe
-failing under the current local ChatGPT login, but it is an inference rather than a confirmed
-diagnosis: IP Studio does not inspect credentials or expose the effective provider transport, and
-the CLI probe intentionally discards stderr. The current verified fact remains that this API-owned
-CLI path did not produce a native ImageGen event plus a decodable PNG. Do not clear AC-25 by retrying
-or by using a private endpoint, browser cookie, or developer API credential; a supported local
-runtime must pass the same end-to-end gate, or the product requirement must be revised through the
-design workflow.
+explicitly list Image Generation as unsupported for ChatGPT-plan use through the Responses API,
+both directly and through Codex App Server. The same document says App Server sends inference over
+HTTP/SSE to Responses and does not accept arbitrary Responses parameters. This rules out treating
+that documented App Server/Responses route as a supported ImageGen runtime.
+
+IP Studio's administrator probe invokes `codex exec`, not `codex app-server`, and captures neither
+the effective transport nor stderr. The App Server limitation therefore does **not** prove why
+these `codex exec` subprocesses time out or exit `1`; the verified fact is only that no API-owned
+probe has produced both a successful native ImageGen event and a decodable PNG. Do not infer a
+single root cause from the similar symptoms.
+
+First-party Codex issue reports add evidence of a separate availability problem: [#37496](https://github.com/openai/codex/issues/37496)
+reports ChatGPT-authenticated CLI sessions with the `image_generation` flag enabled but no tool
+provisioned, and [#44039](https://github.com/openai/codex/issues/44039) reports the built-in tool
+missing in both a fresh desktop task and a standalone CLI session. Both were still open when checked
+on 2026-10-15; they are user reports, not maintainer-confirmed diagnoses or supported workarounds.
+
+The first-party [ImageGen skill](https://github.com/openai/codex/blob/main/codex-rs/skills/src/assets/samples/imagegen/SKILL.md)
+defines built-in `image_gen` as the default path and says its CLI fallback requires `OPENAI_API_KEY`.
+That fallback is a separate developer API billing path and is excluded by this product's invariants.
+The research found no documented way to make an external IP Studio process invoke the current
+Codex task's session-injected `image_gen` tool, nor a supported CLI option that forces tool
+provisioning. Keep AC-25 blocked until a real local runtime passes the existing API-owned gate;
+ChatGPT Web manual generation/import remains the working fallback. Do not use private endpoints,
+browser credentials, or a developer API key to bypass the gate.
 
 IP Studio does not call ChatGPT private endpoints, read browser cookies, or use Plus as a developer
 API key. App Server/CLI authentication stays inside the installed Codex runtime. PostgreSQL
@@ -70,10 +86,13 @@ resolves to the desktop-bundled binary. The distinct binaries authenticate as Ch
 and advertise ImageGen, but their API-owned probes did not pass (timeout or exit code `1`). The
 desktop app itself is up to date. The [current
 ChatGPT-plan compatibility limits](https://developers.openai.com/siwc/token-sharing-open-source/preview-limitations)
-say Image Generation is unsupported through Codex App Server's Responses path. No installed,
-policy-compliant runtime on this host can currently satisfy AC-25. A future runtime must pass the
-same API-owned native event + PNG validation; do not switch to the paid Images/Responses API,
-private endpoints, or browser credentials.
+say Image Generation is unsupported through Codex App Server's Responses path. The open upstream
+reports [#37496](https://github.com/openai/codex/issues/37496) and [#44039](https://github.com/openai/codex/issues/44039)
+also describe ChatGPT-authenticated CLI/desktop sessions where the tool is not provisioned despite
+the feature flag. These reports offer no supported fix. No installed, documented, policy-compliant
+runtime on this host currently satisfies AC-25. A future runtime must pass the same API-owned native
+event + PNG validation; do not switch to the paid Images/Responses API, private endpoints, or
+browser credentials.
 
 The API can select an operator-provided absolute CLI path using
 `IP_STUDIO_CODEX_IMAGEGEN_EXECUTABLE`. An invalid configured path returns `unavailable` without

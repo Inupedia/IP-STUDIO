@@ -263,3 +263,10 @@
 - 完整验证：`bash scripts/verify-v1.sh` 通过：FastAPI 98 passed、Vitest 73 passed、Playwright Chromium 16 passed、production build 成功。
 - 交付：`9956545 feat(codex): configure local ImageGen executable` 已推送到 Draft PR #1；push/PR API 与 Web jobs、GitGuardian 均通过（[push CI](https://github.com/Inupedia/IP-STUDIO/actions/runs/38666402140)、[PR CI](https://github.com/Inupedia/IP-STUDIO/actions/runs/38666407017)）。
 - 状态：路径配置实现已具备；Homebrew、桌面捆绑和 Cursor 捆绑 runtime 均未通过 E2E gate。AC-25 保持 `BLOCKED`，仍需实际兼容的可执行文件/host 通过管理员 PNG 探测并完成候选审核回流；不以 environment override 本身清除产品门槛。
+
+### AC-25 官方能力与运行时兼容性调查（2026-10-15）
+
+- 检索官方 OpenAI 文档：ChatGPT-plan 通过 Sign in with ChatGPT 与 Responses API（包括 Codex App Server）时，Image Generation 明确属于不支持的 hosted tool；App Server 使用 HTTP/SSE Responses transport。该限制证明此 App Server 路径不能作为受支持解法，但 IP Studio 的真实 probe 调用 `codex exec`，目前没有 transport/stderr 证据可以据此断定 subprocess exit code `1` 的根因。
+- 检索 OpenAI Codex 一方 issue tracker：[issue #37496](https://github.com/openai/codex/issues/37496) 报告 ChatGPT-auth CLI 会话 feature flag 为 true 但工具未注入；[issue #44039](https://github.com/openai/codex/issues/44039) 报告 desktop 与 standalone CLI 会话工具均不可调用。两条报告在检查时均开放，未发现 maintainer 确认的修复步骤，故只作上游现象参考。
+- 官方 [ImageGen skill](https://github.com/openai/codex/blob/main/codex-rs/skills/src/assets/samples/imagegen/SKILL.md) 将 session 内置 `image_gen` 作为默认路线；CLI fallback 明确需要 `OPENAI_API_KEY`，属于本项目不允许的 developer API 路线。检索未找到由外部服务受支持地调用当前 Codex task 注入工具的接口，也未找到强制 CLI tool provisioning 的受支持开关。
+- 结论：暂无符合产品约束且有文档支持的兼容 runtime 路径；继续保留 AC-25 `BLOCKED` 与 ChatGPT Web 人工导入回退，不访问 private endpoint/Cookie，不改用 developer API。管理员 API 只有在 native event、PNG 解码和候选回流全链路真实通过后才可解除该门槛。
