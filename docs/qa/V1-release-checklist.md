@@ -20,6 +20,8 @@
 - [x] API-owned Codex 原生 ImageGen 探测与候选回流：Homebrew CLI `0.162.1` 通过管理员 probe；同一 API 实例的真实 Codex run 创建 `codex_native` 候选，状态先为 `pending_review`，经管理员批准后变为 `approved`。旧的桌面包 CLI 超时、Cursor CLI exit code `1` 仍未通过，但没有缓存为可用 runtime。完整脱敏证据见[AC-25 probe + 候选回流](evidence/ac25-native-imagegen-app-server-readback-2026-10-15.json)和[能力矩阵](../architecture/codex-capability-matrix.md)。
 - [x] PR snapshot `6796209` 导出的 `v1.0.0-rc.1+g6796209` 源码候选制品已解包并从制品目录安装锁定依赖后运行完整 `bash scripts/verify-v1.sh`：FastAPI 104、Vitest 73、Playwright Chromium 16、production build 全通过。SHA-256、源 revision、命令和结果见[候选制品清单](evidence/v1-release-candidate-2026-10-15.json)及[verifier 日志](evidence/verify-v1-v1.0.0-rc.1-g6796209.log)；归档存于本机被 `.gitignore` 排除的 `release-artifacts/`。
 - [x] 独立只读静态代码审查覆盖 `origin/main` `086f030` 至 PR head `9ea41e6`，未发现可操作缺陷；审查范围与限制见[审查记录](independent-pr-review-2026-10-15.md)。该审查不是 GitHub 协作者审批。
+- [x] PR #1 head `53f9952` 的 push/PR CI 与 GitGuardian 全部通过，并于 2026-10-15 合并至 `main`，merge commit 为 `be9982c0d825b287ff3b41df7f7d33a6052cefca`。
+- [x] 合并后从该 commit 导出源码快照，在解包目录安装锁定依赖并运行 `bash scripts/verify-v1.sh`：FastAPI 104、Vitest 73、Playwright Chromium 16、production build 全通过。摘要、SHA-256 和日志见[合并后快照清单](evidence/v1-post-merge-snapshot-2026-10-15.json)与[verifier 日志](evidence/verify-v1-v1.0.0-gbe9982c.log)。归档文件仍在本机被 `.gitignore` 排除的 `release-artifacts/`，不是正式发布制品。
 
 ## 阻断规则
 
@@ -27,7 +29,7 @@
 - [x] 用真实 PostgreSQL 数据库与 `ASSET_STORAGE_DIR` Blob 目录执行一次备份/恢复，并确认登录、图片预览、工程 ZIP 再导出。
 - [x] 通过管理员保护的 API 显式运行 Codex ImageGen 能力探测，再启动任务；真实 PNG 自动成为 `pending_review` 候选，经管理员批准后方可复用。完整服务端回流见 AC-25 证据。
 - [x] 为当前 PR snapshot 创建 revision-bound V1 RC 源码制品并在解包制品上运行 verifier；证据见上方。
-- [ ] PR 合并并选定正式版本后，创建最终 V1 tag/制品并再次运行 verifier；RC 验证不替代最终发布版本验证。
+- [ ] 选定正式版本后，创建最终 V1 tag/可分发制品并再次运行 verifier；当前合并快照验证不等于正式发布。
 - [ ] 在选定的实际生产主机配置并核验强 JWT secret、专用数据库凭据、生产 Web origins、HTTPS 反向代理、防火墙和外部备份存储。当前仓库没有生产主机/域名或部署目标，因此本项未执行。
 
-**当前结论：AC-01～AC-26 均通过；本轮完整本地验证、PR head `9ea41e6` 的 push/PR CI 与 GitGuardian、以及 `v1.0.0-rc.1+g6796209` 候选源码制品验证均通过。独立只读静态审查已完成且无可操作缺陷，PR 尚待合并；正式最终版本制品和实际生产环境配置仍待执行。**
+**当前结论：AC-01～AC-26 均通过并已合并到 `main`；PR head `53f9952` 的 push/PR CI 与 GitGuardian、RC 制品验证、合并后源码快照验证均通过。独立只读静态审查未发现可操作缺陷。正式版本 tag/发布制品和实际生产环境配置仍待执行；仓库尚无选定的生产主机或域名。**
