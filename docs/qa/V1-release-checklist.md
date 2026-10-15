@@ -16,6 +16,7 @@
 - [x] PostgreSQL 17.11 runtime migration upgrade/check/downgrade/upgrade/check，以及真实数据库 + Blob 联合恢复；管理员登录、图片读取和工程 ZIP 重导出均通过，见 AC-18。
 - [x] GitHub Actions 的 PostgreSQL 17 migration、API 与 Playwright web jobs 在提交 `3cff5e3` 通过：[push run](https://github.com/Inupedia/IP-STUDIO/actions/runs/38668483943)、[PR run](https://github.com/Inupedia/IP-STUDIO/actions/runs/38668487628)；GitGuardian Security Checks 通过。
 - [x] AC-25 readback implementation head `bc816e8` 的 push 与 PR GitHub Actions API/Web jobs 全部通过，GitGuardian Security Checks 通过：[push run](https://github.com/Inupedia/IP-STUDIO/actions/runs/38676878705)、[PR run](https://github.com/Inupedia/IP-STUDIO/actions/runs/38676883485)。后续 docs head `0ac1a95` 的检查也通过；thread 清理修正待提交后重跑 CI。独立 PR review 尚待完成。
+- [x] thread 失败清理修正 head `d175dfb` 的 push 与 PR GitHub Actions API/Web jobs 全部通过，GitGuardian Security Checks 通过：[push run](https://github.com/Inupedia/IP-STUDIO/actions/runs/38680690391)、[PR run](https://github.com/Inupedia/IP-STUDIO/actions/runs/38680695596)。独立 PR review 尚待完成。
 - [x] API-owned Codex 原生 ImageGen 探测与候选回流：Homebrew CLI `0.162.1` 通过管理员 probe；同一 API 实例的真实 Codex run 创建 `codex_native` 候选，状态先为 `pending_review`，经管理员批准后变为 `approved`。旧的桌面包 CLI 超时、Cursor CLI exit code `1` 仍未通过，但没有缓存为可用 runtime。完整脱敏证据见[AC-25 probe + 候选回流](evidence/ac25-native-imagegen-app-server-readback-2026-10-15.json)和[能力矩阵](../architecture/codex-capability-matrix.md)。
 
 ## 阻断规则
@@ -26,4 +27,4 @@
 - [ ] 创建明确的 V1 发布版本/制品后，对该版本运行 `bash scripts/verify-v1.sh` 并保存终端日志；PR snapshot 验证见上方，尚不代表发布版本。
 - [ ] 在选定的实际生产主机配置并核验强 JWT secret、专用数据库凭据、生产 Web origins、HTTPS 反向代理、防火墙和外部备份存储。当前仓库没有生产主机/域名或部署目标，因此本项未执行。
 
-**当前结论：AC-01～AC-26 均通过；本轮完整本地验证已通过，前一 head 的 push/PR CI 与 GitGuardian 均通过，本次 thread 清理修正待远端重跑；独立 PR review 尚待完成。版本化发布验证和实际生产环境配置仍待执行。**
+**当前结论：AC-01～AC-26 均通过；本轮完整本地验证、thread 清理修正 head 的 push/PR CI 与 GitGuardian 均通过，独立 PR review 尚待完成。版本化发布验证和实际生产环境配置仍待执行。**
