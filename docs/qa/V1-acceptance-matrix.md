@@ -43,4 +43,4 @@ pnpm --filter @ip-studio/web build
 uv run --project services/api pytest -q
 ```
 
-**验收状态：AC-01～AC-26 全部 PASS。** PR 仍需完成本轮代码变更的 CI 与 review。V1 发布检查表中的版本化发布验证和实际生产环境配置仍待执行。
+**验收状态：AC-01～AC-26 全部 PASS。** 当前 PR head 的 CI 已通过，独立 PR review 尚待完成。V1 发布检查表中的版本化发布验证和实际生产环境配置仍待执行。

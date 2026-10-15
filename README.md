@@ -2,7 +2,7 @@
 
 面向原创漫画 IP 的**数字资产管理、可编辑创作与模板化出版工作台**。
 
-> 状态：AC-01～AC-26 验收已全部通过，包括本机 Codex 原生 ImageGen 的 API-owned probe、PNG 校验、候选回流和人工审核。本轮完整本地 verifier 已通过（FastAPI 103、Vitest 73、Playwright 16、production build）；当前 PR 仍需本轮远端 CI 与 review。带版本标记的发布验证日志和实际生产环境配置尚未完成。逐项状态见 [V1 发布检查表](docs/qa/V1-release-checklist.md)。
+> 状态：AC-01～AC-26 验收已全部通过，包括本机 Codex 原生 ImageGen 的 API-owned probe、PNG 校验、候选回流和人工审核。本轮完整本地 verifier 已通过（FastAPI 103、Vitest 73、Playwright 16、production build），PR/push CI 与 GitGuardian 已通过；独立 PR review 尚待完成。带版本标记的发布验证日志和实际生产环境配置尚未完成。逐项状态见 [V1 发布检查表](docs/qa/V1-release-checklist.md)。
 
 ## V1 定位
 
