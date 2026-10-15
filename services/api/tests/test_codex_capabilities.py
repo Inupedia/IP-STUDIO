@@ -5,12 +5,14 @@ from types import SimpleNamespace
 
 from PIL import Image
 
+from app.codex.app_server import ImageGenerationHistoryItem
 from app.codex.capabilities import (
     CapabilityReport,
     ImageGenerationProbeResult,
     probe_capabilities,
     run_image_generation_probe,
 )
+from app.config import Settings
 from app.main import create_app
 from fastapi.testclient import TestClient
 from app.storage.local_blobs import ImageInfo
@@ -21,9 +23,17 @@ TEST_PASSWORD = "test-password-long-enough"
 TEST_SECRET = "test-signing-secret-with-at-least-thirty-two-bytes"
 
 
-def png_bytes() -> bytes:
+def test_settings_read_configured_imagegen_executable(monkeypatch) -> None:
+    monkeypatch.setenv("IP_STUDIO_CODEX_IMAGEGEN_EXECUTABLE", "/opt/codex-imagegen/codex")
+
+    settings = Settings(_env_file=None)
+
+    assert settings.codex_imagegen_executable_path == Path("/opt/codex-imagegen/codex")
+
+
+def png_bytes(color: tuple[int, int, int] = (100, 180, 120)) -> bytes:
     buffer = BytesIO()
-    Image.new("RGB", (4, 3), (100, 180, 120)).save(buffer, format="PNG")
+    Image.new("RGB", (4, 3), color).save(buffer, format="PNG")
     return buffer.getvalue()
 
 
@@ -34,6 +44,42 @@ def test_missing_codex_reports_unavailable() -> None:
     assert "Codex CLI" in report.reason
     assert report.codex_path is None
     assert report.image_generation_advertised is False
+
+
+def test_configured_codex_path_takes_precedence_over_path_lookup(tmp_path) -> None:
+    executable = tmp_path / "codex"
+    executable.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    executable.chmod(0o755)
+    lookup_calls: list[str] = []
+
+    def command_runner(args: list[str], **_kwargs: object) -> SimpleNamespace:
+        if "login" in args:
+            return SimpleNamespace(returncode=0, stdout="Logged in using ChatGPT", stderr="")
+        return SimpleNamespace(returncode=0, stdout="codex-cli 0.163.0", stderr="")
+
+    report = probe_capabilities(
+        configured_codex_path=executable,
+        executable_lookup=lambda name: lookup_calls.append(name) or "/opt/homebrew/bin/codex",
+        command_runner=command_runner,
+        app_server_probe=lambda _path: {"imageGeneration": True},
+    )
+
+    assert report.codex_path == str(executable.resolve())
+    assert report.codex_version == "codex-cli 0.163.0"
+    assert lookup_calls == []
+
+
+def test_invalid_configured_codex_path_does_not_fall_back_to_path(tmp_path) -> None:
+    lookup_calls: list[str] = []
+    report = probe_capabilities(
+        configured_codex_path=tmp_path / "missing-codex",
+        executable_lookup=lambda name: lookup_calls.append(name) or "/opt/homebrew/bin/codex",
+    )
+
+    assert report.status == "unavailable"
+    assert report.codex_path is None
+    assert "配置的 Codex ImageGen 可执行文件不可用" in report.reason
+    assert lookup_calls == []
 
 
 def test_skill_present_but_imagegen_unavailable() -> None:
@@ -122,32 +168,49 @@ def test_needs_auth_is_reported_without_querying_app_server() -> None:
     assert app_server_called is False
 
 
-def test_explicit_imagegen_probe_requires_native_image_event_and_decodable_png(tmp_path) -> None:
+def test_explicit_imagegen_probe_requires_native_image_event_and_decodable_png(tmp_path, monkeypatch) -> None:
+    thread_id = "018f2f70-6af7-7a4b-b1d1-0d21db2db91b"
+    codex_home = tmp_path / "codex-home"
+    generated_dir = codex_home / "generated_images" / thread_id
+    generated_dir.mkdir(parents=True)
+    generated_path = generated_dir / "imagegen.png"
+    generated_path.write_bytes(png_bytes())
+
     def command_runner(args: list[str], **kwargs: object) -> SimpleNamespace:
+        assert "--ephemeral" not in args
         work_dir = Path(args[args.index("-C") + 1])
         (work_dir / "probe.png").write_bytes(png_bytes())
         stdout = kwargs["stdout"]
         assert hasattr(stdout, "write")
         stdout.write(json.dumps({
-            "type": "item.completed",
-            "item": {"type": "imageGeneration", "status": "completed"},
+            "type": "thread.started",
+            "thread_id": thread_id,
         }) + "\n")
         return SimpleNamespace(returncode=0)
 
+    def read_thread(codex_path: str, captured_thread_id: str) -> list[ImageGenerationHistoryItem]:
+        assert codex_path == "/opt/codex"
+        assert captured_thread_id == thread_id
+        return [ImageGenerationHistoryItem(status="completed", saved_path=str(generated_path))]
+
+    monkeypatch.setenv("CODEX_HOME", str(codex_home))
     result = run_image_generation_probe(
         "/opt/codex",
         temp_root=tmp_path,
         command_runner=command_runner,
+        thread_image_generation_reader=read_thread,
     )
-
     assert result.verified is True
     assert result.image is not None
     assert result.image.mime == "image/png"
     assert result.image.width == 4
     assert result.image.height == 3
+    assert not generated_path.exists()
 
 
 def test_image_file_without_native_generation_event_is_rejected(tmp_path) -> None:
+    thread_id = "018f2f70-6af7-7a4b-b1d1-0d21db2db91c"
+
     def command_runner(args: list[str], **kwargs: object) -> SimpleNamespace:
         work_dir = Path(args[args.index("-C") + 1])
         (work_dir / "probe.png").write_bytes(png_bytes())
@@ -155,12 +218,17 @@ def test_image_file_without_native_generation_event_is_rejected(tmp_path) -> Non
             "type": "item.completed",
             "item": {"type": "agent_message", "text": "PNG generated."},
         }) + "\n")
+        kwargs["stdout"].write(json.dumps({
+            "type": "thread.started",
+            "thread_id": thread_id,
+        }) + "\n")
         return SimpleNamespace(returncode=0)
 
     result = run_image_generation_probe(
         "/opt/codex",
         temp_root=tmp_path,
         command_runner=command_runner,
+        thread_image_generation_reader=lambda _path, _thread: [],
     )
 
     assert result.verified is False
@@ -168,9 +236,76 @@ def test_image_file_without_native_generation_event_is_rejected(tmp_path) -> Non
     assert "没有成功的原生 ImageGen" in result.reason
 
 
+def test_imagegen_probe_rejects_output_that_does_not_match_native_saved_png(tmp_path, monkeypatch) -> None:
+    thread_id = "018f2f70-6af7-7a4b-b1d1-0d21db2db91d"
+    codex_home = tmp_path / "codex-home"
+    generated_dir = codex_home / "generated_images" / thread_id
+    generated_dir.mkdir(parents=True)
+    generated_path = generated_dir / "imagegen.png"
+    generated_path.write_bytes(png_bytes((240, 20, 20)))
+    monkeypatch.setenv("CODEX_HOME", str(codex_home))
+
+    def command_runner(args: list[str], **kwargs: object) -> SimpleNamespace:
+        work_dir = Path(args[args.index("-C") + 1])
+        (work_dir / "probe.png").write_bytes(png_bytes())
+        kwargs["stdout"].write(json.dumps({"type": "thread.started", "thread_id": thread_id}) + "\n")
+        return SimpleNamespace(returncode=0)
+
+    result = run_image_generation_probe(
+        "/opt/codex",
+        temp_root=tmp_path,
+        command_runner=command_runner,
+        thread_image_generation_reader=lambda _path, _thread: [
+            ImageGenerationHistoryItem(status="completed", saved_path=str(generated_path))
+        ],
+    )
+
+    assert result.verified is False
+    assert "匹配验证" in result.reason
+    assert not generated_path.exists()
+
+
+def test_imagegen_probe_cleans_thread_scoped_png_when_history_read_fails(tmp_path, monkeypatch) -> None:
+    thread_id = "018f2f70-6af7-7a4b-b1d1-0d21db2db91e"
+    codex_home = tmp_path / "codex-home"
+    generated_dir = codex_home / "generated_images" / thread_id
+    generated_dir.mkdir(parents=True)
+    generated_path = generated_dir / "orphan.png"
+    generated_path.write_bytes(png_bytes())
+    marker_path = generated_dir / "keep.txt"
+    marker_path.write_text("preserve non-image files", encoding="utf-8")
+    other_thread_id = "018f2f70-6af7-7a4b-b1d1-0d21db2db91f"
+    other_thread_dir = codex_home / "generated_images" / other_thread_id
+    other_thread_dir.mkdir(parents=True)
+    other_thread_png = other_thread_dir / "keep.png"
+    other_thread_png.write_bytes(png_bytes())
+    monkeypatch.setenv("CODEX_HOME", str(codex_home))
+
+    def command_runner(_args: list[str], **kwargs: object) -> SimpleNamespace:
+        kwargs["stdout"].write(json.dumps({"type": "thread.started", "thread_id": thread_id}) + "\n")
+        return SimpleNamespace(returncode=0)
+
+    def failed_history_read(_codex_path: str, _thread_id: str) -> list[ImageGenerationHistoryItem]:
+        raise RuntimeError("simulated App Server history failure")
+
+    result = run_image_generation_probe(
+        "/opt/codex",
+        temp_root=tmp_path,
+        command_runner=command_runner,
+        thread_image_generation_reader=failed_history_read,
+    )
+
+    assert result.verified is False
+    assert result.image is None
+    assert not generated_path.exists()
+    assert marker_path.read_text(encoding="utf-8") == "preserve non-image files"
+    assert other_thread_png.exists()
+
+
 def test_capability_endpoint_is_admin_only_and_does_not_trigger_image_generation(
     tmp_path, monkeypatch
 ) -> None:
+    configured_executable = tmp_path / "codex"
     application = create_app(
         database_url=f"sqlite:///{tmp_path / 'codex-capabilities.db'}",
         jwt_secret_key=TEST_SECRET,
@@ -178,6 +313,7 @@ def test_capability_endpoint_is_admin_only_and_does_not_trigger_image_generation
         bootstrap_admin_password=TEST_PASSWORD,
         initialize_schema=True,
         asset_storage_dir=tmp_path / "blobs",
+        codex_imagegen_executable_path=configured_executable,
     )
     called: list[dict[str, object]] = []
 
@@ -209,6 +345,7 @@ def test_capability_endpoint_is_admin_only_and_does_not_trigger_image_generation
     assert report.status_code == 200
     assert report.json()["status"] == "unavailable"
     assert called == [{
+        "configured_codex_path": configured_executable,
         "e2e_verified": False,
         "verified_codex_path": None,
         "verified_codex_version": None,
@@ -216,6 +353,7 @@ def test_capability_endpoint_is_admin_only_and_does_not_trigger_image_generation
 
 
 def test_explicit_probe_endpoint_runs_e2e_and_caches_only_validated_result(tmp_path, monkeypatch) -> None:
+    configured_executable = tmp_path / "codex"
     application = create_app(
         database_url=f"sqlite:///{tmp_path / 'codex-e2e-probe.db'}",
         jwt_secret_key=TEST_SECRET,
@@ -223,6 +361,7 @@ def test_explicit_probe_endpoint_runs_e2e_and_caches_only_validated_result(tmp_p
         bootstrap_admin_password=TEST_PASSWORD,
         initialize_schema=True,
         asset_storage_dir=tmp_path / "blobs",
+        codex_imagegen_executable_path=configured_executable,
     )
     base_report = CapabilityReport(
         status="unavailable",
@@ -237,6 +376,7 @@ def test_explicit_probe_endpoint_runs_e2e_and_caches_only_validated_result(tmp_p
     probe_calls: list[str] = []
 
     def fake_probe(**kwargs: object) -> CapabilityReport:
+        assert kwargs["configured_codex_path"] == configured_executable
         verified = kwargs.get("e2e_verified") is True
         return base_report.model_copy(update={
             "status": "available" if verified else "unavailable",

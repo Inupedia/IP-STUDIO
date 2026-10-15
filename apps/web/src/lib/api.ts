@@ -14,6 +14,7 @@ import type {
   TokenResponse,
 } from '@ip-studio/contracts/domain';
 import type { CanvasDocumentV1, DocumentReadV1, DocumentRevisionReadV1 } from '@ip-studio/contracts/canvas';
+import type { BrandTemplateV1 } from '@ip-studio/contracts/brand';
 import type { ScriptMaterializationResultV1, ScriptRevisionReadV1, ScriptV1 } from '@ip-studio/contracts/script';
 import type {
   GenerationCandidateV1,
@@ -33,6 +34,40 @@ export interface ExportJobReadV1 {
   warnings: string[];
   download_url: string | null;
   created_at: string;
+}
+
+export interface SeriesReadV1 {
+  id: string;
+  ip_id: string;
+  name: string;
+  summary: string | null;
+  created_at: string;
+}
+
+export interface EpisodeReadV1 {
+  id: string;
+  series_id: string;
+  number: number;
+  title: string;
+  status: string;
+  created_at: string;
+}
+
+export interface BrandTemplateVersionReadV1 {
+  brand_template_version_id: string;
+  brand_template_id: string;
+  version_no: number;
+  status: 'candidate' | 'approved' | 'archived';
+  template: BrandTemplateV1;
+  derived_from_version_id: string | null;
+  approved_at: string | null;
+}
+
+export interface BrandTemplateReadV1 {
+  brand_template_id: string;
+  ip_id: string;
+  name: string;
+  versions: BrandTemplateVersionReadV1[];
 }
 
 const TOKEN_KEY = 'ip-studio-access-token';
@@ -122,12 +157,62 @@ export const api = {
     return request('/api/v1/ips');
   },
 
+  getSeries(ipId: string): Promise<SeriesReadV1[]> {
+    return request(`/api/v1/series?ip_id=${encodeURIComponent(ipId)}`);
+  },
+
+  createSeries(ipId: string, name: string, summary?: string): Promise<SeriesReadV1> {
+    return request('/api/v1/series', {
+      method: 'POST',
+      body: jsonBody({ ip_id: ipId, name, summary: summary || null }),
+    });
+  },
+
+  getEpisodes(seriesId: string): Promise<EpisodeReadV1[]> {
+    return request(`/api/v1/series/${seriesId}/episodes`);
+  },
+
+  createEpisode(seriesId: string, number: number, title: string): Promise<EpisodeReadV1> {
+    return request(`/api/v1/series/${seriesId}/episodes`, {
+      method: 'POST',
+      body: jsonBody({ number, title }),
+    });
+  },
+
+  getBrandTemplates(ipId: string): Promise<BrandTemplateReadV1[]> {
+    return request(`/api/v1/ips/${ipId}/brand-templates`);
+  },
+
+  createBrandTemplate(
+    ipId: string,
+    name: string,
+    template: BrandTemplateV1,
+  ): Promise<BrandTemplateVersionReadV1> {
+    return request(`/api/v1/ips/${ipId}/brand-templates`, {
+      method: 'POST',
+      body: jsonBody({ name, template }),
+    });
+  },
+
+  getBrandTemplateVersion(versionId: string): Promise<BrandTemplateVersionReadV1> {
+    return request(`/api/v1/brand-template-versions/${versionId}`);
+  },
+
+  approveBrandTemplateVersion(versionId: string): Promise<BrandTemplateVersionReadV1> {
+    return request(`/api/v1/brand-template-versions/${versionId}/approve`, { method: 'POST' });
+  },
+
   createIp(payload: IPCreate): Promise<IP> {
     return request('/api/v1/ips', { method: 'POST', body: jsonBody(payload) });
   },
 
   getAssets(ipId: string): Promise<AssetVersion[]> {
     return request(`/api/v1/assets?ip_id=${encodeURIComponent(ipId)}`);
+  },
+
+  getAssetVersion(ipId: string, versionId: string): Promise<AssetVersion> {
+    const query = new URLSearchParams({ ip_id: ipId });
+    return request(`/api/v1/assets/versions/${versionId}?${query}`);
   },
 
   uploadAsset(

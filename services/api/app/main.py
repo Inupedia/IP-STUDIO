@@ -42,6 +42,7 @@ def create_app(
     bootstrap_admin_password: str | None = None,
     initialize_schema: bool = False,
     asset_storage_dir: Path | str | None = None,
+    codex_imagegen_executable_path: Path | str | None = None,
 ) -> FastAPI:
     settings = Settings()
     resolved_database_url = database_url or settings.database_url
@@ -72,6 +73,14 @@ def create_app(
     application.state.codex_job_root = application.state.asset_storage_dir.parent / "codex-jobs"
     application.state.asset_max_bytes = settings.asset_max_bytes
     application.state.asset_max_pixels = settings.asset_max_pixels
+    configured_codex_imagegen_path = (
+        codex_imagegen_executable_path
+        if codex_imagegen_executable_path is not None
+        else settings.codex_imagegen_executable_path
+    )
+    application.state.codex_imagegen_executable_path = (
+        Path(configured_codex_imagegen_path) if configured_codex_imagegen_path is not None else None
+    )
     application.state.codex_imagegen_verified_path = None
     application.state.codex_imagegen_verified_version = None
     configured_secret = jwt_secret_key if jwt_secret_key is not None else settings.jwt_secret_key

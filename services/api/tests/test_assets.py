@@ -57,6 +57,22 @@ def upload(client: TestClient, ip_id: str, content: bytes, mime: str = "image/pn
     )
 
 
+def test_three_ips_keep_their_uploaded_assets_separate(client: TestClient) -> None:
+    ip_ids = [create_ip(client, code) for code in ("KAZI", "PULU", "LING")]
+    uploaded = [
+        upload(client, ip_id, image_bytes(size=(index + 2, 2)), name=f"ip-{index}.png")
+        for index, ip_id in enumerate(ip_ids)
+    ]
+
+    assert all(response.status_code == 201 for response in uploaded)
+    for index, ip_id in enumerate(ip_ids):
+        assets = client.get("/api/v1/assets", params={"ip_id": ip_id})
+        assert assets.status_code == 200
+        assert len(assets.json()) == 1
+        assert assets.json()[0]["owner_ip_id"] == ip_id
+        assert assets.json()[0]["name"] == f"ip-{index}.png"
+
+
 def test_reject_fake_png(client: TestClient) -> None:
     response = upload(client, create_ip(client), b"<html>not a png</html>")
 
@@ -240,3 +256,33 @@ def test_new_asset_version_keeps_previous_version_immutable(client: TestClient) 
     assert latest_content.content == second_content
     with client.app.state.session_factory() as session:
         assert session.scalar(select(func.count()).select_from(AssetVersion)) == 2
+
+
+def test_frozen_asset_version_can_be_resolved_after_new_version_upload(client: TestClient) -> None:
+    ip_id = create_ip(client, "FROZEN")
+    other_ip_id = create_ip(client, "OTHER")
+    first = upload(client, ip_id, image_bytes("PNG"))
+    assert first.status_code == 201
+    asset_id = first.json()["asset_id"]
+    old_version_id = first.json()["asset_version_id"]
+    second = client.post(
+        f"/api/v1/assets/{asset_id}/versions",
+        data={"ip_id": ip_id},
+        files={"file": ("new.webp", image_bytes("WEBP"), "image/webp")},
+    )
+    assert second.status_code == 201
+
+    resolved = client.get(
+        f"/api/v1/assets/versions/{old_version_id}",
+        params={"ip_id": ip_id},
+    )
+    denied = client.get(
+        f"/api/v1/assets/versions/{old_version_id}",
+        params={"ip_id": other_ip_id},
+    )
+
+    assert resolved.status_code == 200
+    assert resolved.json()["asset_id"] == asset_id
+    assert resolved.json()["asset_version_id"] == old_version_id
+    assert resolved.json()["version_no"] == 1
+    assert denied.status_code == 404

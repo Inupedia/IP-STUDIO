@@ -1,4 +1,4 @@
-import PptxGenJS from 'pptxgenjs';
+import type PptxGenJs from 'pptxgenjs';
 import type { BrandTemplateV1 } from '@ip-studio/contracts/brand';
 import type { CanvasDocumentV1 } from '@ip-studio/contracts/canvas';
 import type {
@@ -151,7 +151,7 @@ function brandText(
   };
 }
 
-function addShape(slide: PptxGenJS.Slide, pptx: PptxGenJS, item: PptxShapeObject): void {
+function addShape(slide: PptxGenJs.Slide, pptx: PptxGenJs, item: PptxShapeObject): void {
   const shapeName = pptx.ShapeType[item.shape as keyof typeof pptx.ShapeType];
   slide.addShape(shapeName, {
     x: item.x,
@@ -174,7 +174,7 @@ function addShape(slide: PptxGenJS.Slide, pptx: PptxGenJS, item: PptxShapeObject
   });
 }
 
-function addText(slide: PptxGenJS.Slide, item: PptxTextObject): void {
+function addText(slide: PptxGenJs.Slide, item: PptxTextObject): void {
   slide.addText(item.text, {
     x: item.x,
     y: item.y,
@@ -259,8 +259,8 @@ async function imageDataForPptx(item: PptxImageObject): Promise<string> {
 }
 
 async function addObjectsToSlide(
-  slide: PptxGenJS.Slide,
-  pptx: PptxGenJS,
+  slide: PptxGenJs.Slide,
+  pptx: PptxGenJs,
   objects: PptxObject[],
 ): Promise<void> {
   for (const item of objects) {
@@ -322,6 +322,7 @@ export async function exportEpisodePptx(
   const warnings = new Set<string>([
     'PPTX 与网页画布的字体和自动换行可能不同；请打开文件检查预览。',
   ]);
+  const PptxGenJS = (await import('pptxgenjs')).default;
   const pptx = new PptxGenJS();
   pptx.defineLayout({ name: 'IP_STUDIO_PORTRAIT', width: frame.width, height: frame.height });
   pptx.layout = 'IP_STUDIO_PORTRAIT';

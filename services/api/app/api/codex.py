@@ -22,6 +22,7 @@ def read_capabilities(
     codex_version = request.app.state.codex_imagegen_verified_version
     verified = bool(codex_path and codex_version)
     return probe_capabilities(
+        configured_codex_path=request.app.state.codex_imagegen_executable_path,
         e2e_verified=verified,
         verified_codex_path=codex_path,
         verified_codex_version=codex_version,
@@ -33,7 +34,9 @@ def run_capability_probe(
     request: Request,
     _current_admin: Annotated[User, Depends(get_current_admin)],
 ) -> CapabilityReport:
-    report = probe_capabilities()
+    report = probe_capabilities(
+        configured_codex_path=request.app.state.codex_imagegen_executable_path,
+    )
     if not report.codex_path or not report.image_generation_advertised:
         request.app.state.codex_imagegen_verified_path = None
         request.app.state.codex_imagegen_verified_version = None
@@ -48,6 +51,7 @@ def run_capability_probe(
     request.app.state.codex_imagegen_verified_path = report.codex_path
     request.app.state.codex_imagegen_verified_version = report.codex_version
     return probe_capabilities(
+        configured_codex_path=request.app.state.codex_imagegen_executable_path,
         e2e_verified=True,
         verified_codex_path=report.codex_path,
         verified_codex_version=report.codex_version,

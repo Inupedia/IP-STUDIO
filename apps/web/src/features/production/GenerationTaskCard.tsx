@@ -6,6 +6,7 @@ export interface GenerationTaskCardProps {
   task: GenerationTaskV1;
   onStartManualGeneration: () => Promise<unknown>;
   onDownloadReferenceBundle: () => Promise<unknown>;
+  onTaskStatusChange?: (status: GenerationTaskV1['status']) => void;
 }
 
 const statusLabels: Record<GenerationTaskV1['status'], string> = {
@@ -24,6 +25,7 @@ export function GenerationTaskCard({
   task,
   onStartManualGeneration,
   onDownloadReferenceBundle,
+  onTaskStatusChange,
 }: GenerationTaskCardProps) {
   const [taskStatus, setTaskStatus] = useState(task.status);
   const [busy, setBusy] = useState(false);
@@ -51,6 +53,7 @@ export function GenerationTaskCard({
     try {
       await onStartManualGeneration();
       setTaskStatus('waiting_manual_generation');
+      onTaskStatusChange?.('waiting_manual_generation');
       setMessage('状态已更新：人工生成中。请在 ChatGPT Web 中手动粘贴提示词并导入结果。');
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : '无法更新任务状态');

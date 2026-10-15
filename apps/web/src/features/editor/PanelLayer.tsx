@@ -39,31 +39,23 @@ function useImage(source: string | undefined): HTMLImageElement | undefined {
 interface ElementNodeProps {
   element: CanvasElementV1;
   assetSources: Record<string, string>;
-  onSelect: (id: string) => void;
+  onSelect: (id: string, additive?: boolean) => void;
   onEditText: (id: string) => void;
-  onTransform: (id: string, transform: ElementTransform) => void;
+  onDragStart: (id: string) => void;
+  onPositionChange: (id: string, transform: ElementTransform) => void;
 }
 
-function ElementNode({ element, assetSources, onSelect, onEditText, onTransform }: ElementNodeProps) {
+function ElementHitTarget({ width, height }: { width: number; height: number }) {
+  return <Rect width={width} height={height} fill="transparent" />;
+}
+
+function ElementNode({ element, assetSources, onSelect, onEditText, onDragStart, onPositionChange }: ElementNodeProps) {
   const assetVersionId = 'asset_version_id' in element ? element.asset_version_id : undefined;
   const image = useImage(assetVersionId ? assetSources[assetVersionId] : undefined);
   const transform = element.transform;
   const draggable = !element.locked;
   const handleDragEnd = (event: Konva.KonvaEventObject<DragEvent>) => {
-    onTransform(element.id, { ...transform, x: event.target.x(), y: event.target.y() });
-  };
-  const handleTransformEnd = (event: Konva.KonvaEventObject<Event>) => {
-    const node = event.target;
-    const next = {
-      ...transform,
-      x: node.x(),
-      y: node.y(),
-      width: Math.max(1, transform.width * node.scaleX()),
-      height: Math.max(1, transform.height * node.scaleY()),
-      rotation: node.rotation(),
-    };
-    node.scale({ x: 1, y: 1 });
-    onTransform(element.id, next);
+    onPositionChange(element.id, { ...transform, x: event.target.x(), y: event.target.y() });
   };
   const groupProps = {
     id: element.id,
@@ -75,13 +67,16 @@ function ElementNode({ element, assetSources, onSelect, onEditText, onTransform 
     opacity: element.opacity,
     draggable,
     listening: true,
-    onClick: () => onSelect(element.id),
+    onClick: (event: Konva.KonvaEventObject<MouseEvent>) => onSelect(
+      element.id,
+      event.evt.shiftKey || event.evt.metaKey || event.evt.ctrlKey,
+    ),
     onTap: () => onSelect(element.id),
+    onDragStart: () => onDragStart(element.id),
     onDblClick: !element.locked && ['text', 'chat_message', 'speech_bubble', 'thought_bubble'].includes(element.type)
       ? () => onEditText(element.id)
       : undefined,
     onDragEnd: handleDragEnd,
-    onTransformEnd: handleTransformEnd,
   };
 
   switch (element.type) {
@@ -89,6 +84,7 @@ function ElementNode({ element, assetSources, onSelect, onEditText, onTransform 
     case 'sticker':
       return (
         <Group {...groupProps}>
+          <ElementHitTarget width={transform.width} height={transform.height} />
           {image ? (
             <KonvaImage image={image} width={transform.width} height={transform.height} crop={{
               x: element.type === 'image' ? element.crop.x * image.width : 0,
@@ -104,6 +100,7 @@ function ElementNode({ element, assetSources, onSelect, onEditText, onTransform 
     case 'text':
       return (
         <Group {...groupProps}>
+          <ElementHitTarget width={transform.width} height={transform.height} />
           <TextElement element={element} />
         </Group>
       );
@@ -111,6 +108,7 @@ function ElementNode({ element, assetSources, onSelect, onEditText, onTransform 
     case 'thought_bubble':
       return (
         <Group {...groupProps}>
+          <ElementHitTarget width={transform.width} height={transform.height} />
           <Rect
             width={transform.width}
             height={transform.height}
@@ -138,6 +136,7 @@ function ElementNode({ element, assetSources, onSelect, onEditText, onTransform 
     case 'chat_message': {
       return (
         <Group {...groupProps}>
+          <ElementHitTarget width={transform.width} height={transform.height} />
           <ChatMessage element={element} />
         </Group>
       );
@@ -146,6 +145,7 @@ function ElementNode({ element, assetSources, onSelect, onEditText, onTransform 
       if (element.props.shape === 'ellipse') {
         return (
           <Group {...groupProps}>
+            <ElementHitTarget width={transform.width} height={transform.height} />
             <Ellipse
               x={transform.width / 2}
               y={transform.height / 2}
@@ -163,6 +163,7 @@ function ElementNode({ element, assetSources, onSelect, onEditText, onTransform 
         const ShapeComponent = element.props.shape === 'arrow' ? Arrow : Line;
         return (
           <Group {...groupProps}>
+            <ElementHitTarget width={transform.width} height={transform.height} />
             <ShapeComponent
               points={[0, 0, transform.width, transform.height]}
               stroke={element.props.stroke}
@@ -175,6 +176,7 @@ function ElementNode({ element, assetSources, onSelect, onEditText, onTransform 
       }
       return (
         <Group {...groupProps}>
+          <ElementHitTarget width={transform.width} height={transform.height} />
           <Rect
             width={transform.width}
             height={transform.height}
@@ -189,6 +191,7 @@ function ElementNode({ element, assetSources, onSelect, onEditText, onTransform 
     case 'panel_frame':
       return (
         <Group {...groupProps}>
+          <ElementHitTarget width={transform.width} height={transform.height} />
           <Rect
             width={transform.width}
             height={transform.height}
@@ -207,13 +210,15 @@ export function PanelLayer({
   assetSources,
   onSelect,
   onEditText,
-  onTransform,
+  onDragStart,
+  onPositionChange,
 }: {
   page: CanvasDocumentV1['pages'][number];
   assetSources: Record<string, string>;
-  onSelect: (id: string) => void;
+  onSelect: (id: string, additive?: boolean) => void;
   onEditText: (id: string) => void;
-  onTransform: (id: string, transform: ElementTransform) => void;
+  onDragStart: (id: string) => void;
+  onPositionChange: (id: string, transform: ElementTransform) => void;
 }) {
   return (
     <Layer id="panel-content-layer">
@@ -243,7 +248,8 @@ export function PanelLayer({
               assetSources={assetSources}
               onSelect={onSelect}
               onEditText={onEditText}
-              onTransform={onTransform}
+              onDragStart={onDragStart}
+              onPositionChange={onPositionChange}
             />
           ))}
         </Group>

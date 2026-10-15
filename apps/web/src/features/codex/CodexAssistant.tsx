@@ -9,7 +9,9 @@ export interface CodexAssistantProps {
   episodeId: string;
   currentRevision: number;
   currentDocument: CanvasDocumentV1 | null;
-  onApplied?: (document: CanvasDocumentV1) => void;
+  isCanvasDirty?: boolean;
+  onApplyBusyChange?: (busy: boolean) => void;
+  onApplied?: (document: CanvasDocumentV1) => void | Promise<void>;
   onManualEdit: () => void;
 }
 
@@ -17,6 +19,8 @@ export function CodexAssistant({
   episodeId,
   currentRevision,
   currentDocument,
+  isCanvasDirty = false,
+  onApplyBusyChange,
   onApplied,
   onManualEdit,
 }: CodexAssistantProps) {
@@ -73,7 +77,12 @@ export function CodexAssistant({
   }
 
   async function approveProposal(proposal: CodexPatchProposalV1) {
+    if (isCanvasDirty) {
+      setError('请先保存画布，再批准 Patch 建议。');
+      return;
+    }
     setBusy(true);
+    onApplyBusyChange?.(true);
     setError('');
     try {
       const reviewed = await api.approveCodexPatch(
@@ -83,11 +92,12 @@ export function CodexAssistant({
       );
       setProposals((items) => items.map((item) => item.patch_id === reviewed.patch_id ? reviewed : item));
       const current = await api.getEpisodeDocument(episodeId);
-      if (current.document) onApplied?.(current.document);
+      if (current.document) await onApplied?.({ ...current.document, revision: current.revision });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : '无法批准 Patch；画布没有被覆盖。');
     } finally {
       setBusy(false);
+      onApplyBusyChange?.(false);
     }
   }
 
@@ -150,6 +160,7 @@ export function CodexAssistant({
           currentDocument={currentDocument}
           currentRevision={currentRevision}
           busy={busy}
+          canApprove={!isCanvasDirty}
           onApprove={() => void approveProposal(pendingProposal)}
           onReject={() => void rejectProposal(pendingProposal)}
         />

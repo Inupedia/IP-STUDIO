@@ -12,11 +12,20 @@ import { CanvasToolbar } from './CanvasToolbar';
 import { LayoutPicker } from '../templates/LayoutPicker';
 import { PanelLayer } from './PanelLayer';
 import { applyCanvasCommand, type CanvasCommand } from './commands';
+import {
+  collectSelectionTransforms,
+  createGroupDragTracker,
+  selectionTransformCommand,
+  trackGroupDragEnd,
+  type GroupDragTracker,
+} from './selectionTransform';
 import { ReplacePanelImage } from './ReplacePanelImage';
 import { ExportPanel } from '../export/ExportPanel';
+import { canvasElementMayOverflowText } from './textOverflow';
 
 type PresetLayoutCode = Exclude<LayoutCode, 'custom'>;
 type ElementTransform = CanvasElementV1['transform'];
+type GroupDragOrigin = { origins: Map<string, ElementTransform>; tracker: GroupDragTracker };
 
 export interface ComicEditorProps {
   document: CanvasDocumentV1;
@@ -91,7 +100,11 @@ export function ComicEditor({
   saveStatus = 'saved',
 }: ComicEditorProps) {
   const [currentPageId, setCurrentPageId] = useState(document.pages[0]?.id ?? '');
+  const [insertionPanelId, setInsertionPanelId] = useState(document.pages[0]?.panels[0]?.id ?? '');
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
+  const [selectedElementIds, setSelectedElementIds] = useState<string[]>([]);
+  const [groupMoveX, setGroupMoveX] = useState('0');
+  const [groupMoveY, setGroupMoveY] = useState('0');
   const [zoom, setZoom] = useState(0.7);
   const [showGrid, setShowGrid] = useState(false);
   const [showSafeArea, setShowSafeArea] = useState(false);
@@ -99,7 +112,9 @@ export function ComicEditor({
   const [inlineEdit, setInlineEdit] = useState<{ elementId: string; value: string } | null>(null);
   const stageRef = useRef<Konva.Stage | null>(null);
   const transformerRef = useRef<Konva.Transformer | null>(null);
+  const groupDragOrigin = useRef<GroupDragOrigin | null>(null);
   const page = document.pages.find((candidate) => candidate.id === currentPageId) ?? document.pages[0];
+  const insertionPanel = page.panels.find((panel) => panel.id === insertionPanelId) ?? page.panels[0];
   const selectedElement = findElement(page, selectedElementId);
   const selectedPanel = page.panels.find((panel) =>
     panel.elements.some((element) => element.id === selectedElementId),
@@ -108,18 +123,29 @@ export function ComicEditor({
   const inlineEditPanel = inlineEdit
     ? page.panels.find((panel) => panel.elements.some((element) => element.id === inlineEdit.elementId)) ?? null
     : null;
+  const overflowingTextCount = page.panels
+    .flatMap((panel) => panel.elements)
+    .filter(canvasElementMayOverflowText).length;
   const backgroundElements = brand.locked_elements.filter((element) => element.kind === 'background');
+
+  useEffect(() => {
+    if (!page.panels.some((panel) => panel.id === insertionPanelId)) {
+      setInsertionPanelId(page.panels[0]?.id ?? '');
+    }
+  }, [page, insertionPanelId]);
 
   useEffect(() => {
     const stage = stageRef.current;
     const transformer = transformerRef.current;
     if (!stage || !transformer) return;
-    const selected = selectedElement && !selectedElement.locked
-      ? stage.findOne(`#${selectedElement.id}`)
-      : undefined;
-    transformer.nodes(selected ? [selected] : []);
+    const selectedNodes = selectedElementIds.flatMap((elementId) => {
+      const element = findElement(page, elementId);
+      const node = element && !element.locked ? stage.findOne(`#${elementId}`) : undefined;
+      return node ? [node] : [];
+    });
+    transformer.nodes(selectedNodes);
     transformer.getLayer()?.batchDraw();
-  }, [selectedElement, page]);
+  }, [selectedElement, selectedElementIds, page]);
 
   const gridLines = useMemo(() => {
     const lines: { points: number[]; key: string }[] = [];
@@ -148,6 +174,24 @@ export function ComicEditor({
   }
 
   function updateElementTransform(elementId: string, transform: ElementTransform) {
+    const groupStart = groupDragOrigin.current;
+    if (groupStart?.origins.has(elementId)) {
+      const dragEnd = trackGroupDragEnd(groupStart.tracker, elementId);
+      groupStart.tracker = dragEnd.tracker;
+      if (dragEnd.shouldCommit) {
+        const stage = stageRef.current;
+        const transforms = [...groupStart.origins].map(([id, original]) => {
+          const node = stage?.findOne(`#${id}`);
+          return {
+            element_id: id,
+            transform: { ...original, x: node?.x() ?? original.x, y: node?.y() ?? original.y },
+          };
+        });
+        updateElementTransforms(transforms);
+      }
+      if (dragEnd.finished) groupDragOrigin.current = null;
+      return;
+    }
     if (dispatchCommand) {
       dispatchCommand({ type: 'set_transform', element_id: elementId, transform });
       return;
@@ -167,12 +211,105 @@ export function ComicEditor({
     updateDocument(next);
   }
 
+  function updateElementTransforms(transforms: Array<{ element_id: string; transform: ElementTransform }>) {
+    if (dispatchCommand) {
+      dispatchCommand({ type: 'set_transforms', transforms });
+      return;
+    }
+    updateDocument(applyCanvasCommand(document, { type: 'set_transforms', transforms }));
+  }
+
+  function commitSelectionTransforms() {
+    const nodes = transformerRef.current?.nodes() ?? [];
+    const snapshots = nodes.map((node) => ({
+      element_id: node.id(),
+      x: node.x(),
+      y: node.y(),
+      scaleX: node.scaleX(),
+      scaleY: node.scaleY(),
+      rotation: node.rotation(),
+    }));
+    const elements = page.panels.flatMap((panel) => panel.elements);
+    const transforms = collectSelectionTransforms(elements, snapshots);
+    nodes.forEach((node) => node.scale({ x: 1, y: 1 }));
+    const command = selectionTransformCommand(transforms);
+    if (!command) return;
+    if (dispatchCommand) {
+      dispatchCommand(command);
+      return;
+    }
+    updateDocument(applyCanvasCommand(document, command));
+  }
+
+  function beginGroupDrag(elementId: string) {
+    if (groupDragOrigin.current?.origins.has(elementId)) return;
+    if (selectedElementIds.length < 2 || !selectedElementIds.includes(elementId)) {
+      groupDragOrigin.current = null;
+      return;
+    }
+    const origins = new Map(selectedElementIds.flatMap((id) => {
+      const element = findElement(page, id);
+      return element && !element.locked ? [[id, element.transform] as const] : [];
+    }));
+    if (origins.size < 2) {
+      groupDragOrigin.current = null;
+      return;
+    }
+    groupDragOrigin.current = {
+      origins,
+      tracker: createGroupDragTracker(elementId, [...origins.keys()]),
+    };
+  }
+
+  function applyGroupMove() {
+    const dx = Number(groupMoveX);
+    const dy = Number(groupMoveY);
+    if (!Number.isFinite(dx) || !Number.isFinite(dy) || (dx === 0 && dy === 0)) return;
+    const elements = selectedElementIds.map((elementId) => findElement(page, elementId));
+    if (elements.some((element) => !element || element.locked)) {
+      setEditorError('所选图层中包含锁定或已移除的元素。');
+      return;
+    }
+    const transforms = selectedElementIds.map((elementId, index) => {
+      const element = elements[index]!;
+      return {
+        element_id: elementId,
+        transform: { ...element.transform, x: element.transform.x + dx, y: element.transform.y + dy },
+      };
+    });
+    updateElementTransforms(transforms);
+    setEditorError('');
+  }
+
+  function selectElement(elementId: string, additive = false) {
+    const element = findElement(page, elementId);
+    const elementPanel = page.panels.find((panel) => panel.elements.some((item) => item.id === elementId));
+    if (elementPanel) setInsertionPanelId(elementPanel.id);
+    if (element?.locked && additive) return;
+    if (additive && selectedElementIds.length > 0) {
+      const originalPanelId = page.panels.find((panel) => panel.elements.some((item) => item.id === selectedElementIds[0]))?.id;
+      const targetPanelId = page.panels.find((panel) => panel.elements.some((item) => item.id === elementId))?.id;
+      if (originalPanelId !== targetPanelId) {
+        setEditorError('请在同一画格内多选并移动图层。');
+        return;
+      }
+    }
+    const nextIds = additive
+      ? selectedElementIds.includes(elementId)
+        ? selectedElementIds.filter((selectedId) => selectedId !== elementId)
+        : [...selectedElementIds, elementId]
+      : [elementId];
+    setSelectedElementIds(nextIds);
+    setSelectedElementId(nextIds.at(-1) ?? null);
+  }
+
   function changeLayout(code: PresetLayoutCode) {
     try {
       const layout = getLayout(code, page.width, page.height);
       if (dispatchCommand) {
         dispatchCommand({ type: 'set_layout', page_id: page.id, layout });
         setSelectedElementId(null);
+        setSelectedElementIds([]);
         setEditorError('');
         return;
       }
@@ -200,6 +337,7 @@ export function ComicEditor({
           : candidate),
       });
       setSelectedElementId(null);
+      setSelectedElementIds([]);
       setEditorError('');
     } catch (cause) {
       setEditorError(cause instanceof Error ? cause.message : '无法切换画格布局');
@@ -232,6 +370,7 @@ export function ComicEditor({
     const value = getEditableText(element);
     if (value === null) return;
     setSelectedElementId(elementId);
+    setSelectedElementIds([elementId]);
     setInlineEdit({ elementId, value });
   }
 
@@ -264,9 +403,11 @@ export function ComicEditor({
   }
 
   function addElement(element: CanvasElementV1) {
+    if (!insertionPanel) return;
     if (dispatchCommand) {
-      dispatchCommand({ type: 'add_element', panel_id: page.panels[0].id, element });
+      dispatchCommand({ type: 'add_element', panel_id: insertionPanel.id, element });
       setSelectedElementId(element.id);
+      setSelectedElementIds([element.id]);
       return;
     }
     updateDocument({
@@ -274,22 +415,72 @@ export function ComicEditor({
       pages: document.pages.map((currentPage) => currentPage.id === page.id
         ? {
           ...currentPage,
-          panels: currentPage.panels.map((panel, index) => index === 0
+          panels: currentPage.panels.map((panel) => panel.id === insertionPanel.id
             ? { ...panel, elements: [...panel.elements, element] }
             : panel),
         }
         : currentPage),
     });
     setSelectedElementId(element.id);
+    setSelectedElementIds([element.id]);
   }
 
   function addTextElement() {
-    const topZ = Math.max(0, ...page.panels.flatMap((panel) => panel.elements.map((element) => element.z_index))) + 1;
+    const topZ = Math.max(0, ...(insertionPanel?.elements.map((element) => element.z_index) ?? [])) + 1;
     addElement({
       id: crypto.randomUUID(),
       type: 'text',
       props: { text: '在属性栏编辑文字', font_family: 'sans-serif', font_size: 32, font_weight: 400, color: '#242923', align: 'left', line_height: 1.3, letter_spacing: 0 },
       transform: { x: 40, y: 40, width: 360, height: 90, rotation: 0 },
+      opacity: 1,
+      z_index: topZ,
+      locked: false,
+    });
+  }
+
+  function addImageElement() {
+    const panel = insertionPanel;
+    const asset = availableAssets.find((candidate) => candidate.status === 'approved');
+    if (!panel || !asset) {
+      setEditorError('请先在当前 IP 素材库批准一张图片，再添加到画格。');
+      return;
+    }
+    const maxWidth = Math.max(1, panel.rect.width - 64);
+    const maxHeight = Math.max(1, panel.rect.height - 64);
+    const aspectRatio = asset.width / asset.height;
+    const width = Math.min(maxWidth, maxHeight * aspectRatio);
+    const height = width / aspectRatio;
+    const topZ = Math.max(0, ...panel.elements.map((element) => element.z_index)) + 1;
+    addElement({
+      id: crypto.randomUUID(),
+      type: 'image',
+      asset_version_id: asset.asset_version_id,
+      transform: { x: 32, y: 32, width, height, rotation: 0 },
+      crop: { x: 0, y: 0, width: 1, height: 1 },
+      opacity: 1,
+      z_index: topZ,
+      locked: false,
+    });
+  }
+
+  function addSpeechBubbleElement() {
+    const panel = insertionPanel;
+    if (!panel) return;
+    const topZ = Math.max(0, ...panel.elements.map((element) => element.z_index)) + 1;
+    addElement({
+      id: crypto.randomUUID(),
+      type: 'speech_bubble',
+      props: {
+        text: '在属性栏编辑气泡文字',
+        shape: 'rounded_rectangle',
+        fill: '#ffffff',
+        stroke: '#242923',
+        stroke_width: 2,
+        tail_position: 'bottom',
+        font_family: 'sans-serif',
+        font_size: 28,
+      },
+      transform: { x: 40, y: 150, width: 360, height: 120, rotation: 0 },
       opacity: 1,
       z_index: topZ,
       locked: false,
@@ -313,6 +504,7 @@ export function ComicEditor({
       });
     }
     setSelectedElementId(null);
+    setSelectedElementIds([]);
   }
 
   return (
@@ -345,7 +537,9 @@ export function ComicEditor({
                 aria-pressed={item.id === page.id}
                 onClick={() => {
                   setCurrentPageId(item.id);
+                  setInsertionPanelId(item.panels[0]?.id ?? '');
                   setSelectedElementId(null);
+                  setSelectedElementIds([]);
                   setInlineEdit(null);
                 }}
               >
@@ -367,6 +561,11 @@ export function ComicEditor({
             <span className="editor-brand-lock">外壳锁定 · 品牌版本 {document.brand_template_version_id.slice(0, 8)}</span>
           </div>
           {editorError && <p className="editor-error" role="alert">{editorError}</p>}
+          {overflowingTextCount > 0 && (
+            <p className="editor-warning" role="alert">
+              有 {overflowingTextCount} 个文字元素文字可能超出文本框；请缩短文字或调整文本框尺寸后再导出。
+            </p>
+          )}
           <div className="canvas-scroll-area">
             <div
               className="canvas-stage-viewport"
@@ -392,9 +591,10 @@ export function ComicEditor({
                   <PanelLayer
                     page={page}
                     assetSources={assetSources}
-                    onSelect={setSelectedElementId}
+                    onSelect={selectElement}
                     onEditText={startInlineEdit}
-                    onTransform={updateElementTransform}
+                    onDragStart={beginGroupDrag}
+                    onPositionChange={updateElementTransform}
                   />
                   {(showGrid || showSafeArea) && (
                     <Layer listening={false} id="editor-guides-layer">
@@ -425,6 +625,7 @@ export function ComicEditor({
                   <Layer id="selection-layer">
                     <Transformer
                       ref={transformerRef}
+                      onTransformEnd={commitSelectionTransforms}
                       rotateEnabled
                       keepRatio={selectedElement?.type === 'image' || selectedElement?.type === 'sticker'}
                       enabledAnchors={['top-left', 'top-right', 'bottom-left', 'bottom-right', 'middle-left', 'middle-right', 'top-center', 'bottom-center']}
@@ -487,16 +688,24 @@ export function ComicEditor({
             <h3>当前画格图层</h3>
           </div>
           <div className="editor-insert-controls">
+            <label className="editor-insert-panel-target">
+              插入目标画格
+              <select aria-label="插入目标画格" value={insertionPanel?.id ?? ''} onChange={(event) => setInsertionPanelId(event.currentTarget.value)}>
+                {page.panels.map((panel, index) => <option key={panel.id} value={panel.id}>格 {index + 1}</option>)}
+              </select>
+            </label>
             <button type="button" onClick={addTextElement}>＋ 添加文字</button>
+            <button type="button" disabled={!availableAssets.some((asset) => asset.status === 'approved')} onClick={addImageElement}>＋ 添加已批准图片</button>
+            <button type="button" onClick={addSpeechBubbleElement}>＋ 添加对白气泡</button>
           </div>
           <div className="editor-layer-list">
             {page.panels.flatMap((panel, panelIndex) => panel.elements.map((element) => (
               <button
                 key={element.id}
                 type="button"
-                className={`editor-layer-row ${selectedElementId === element.id ? 'is-selected' : ''}`}
-                aria-pressed={selectedElementId === element.id}
-                onClick={() => setSelectedElementId(element.id)}
+                className={`editor-layer-row ${selectedElementIds.includes(element.id) ? 'is-selected' : ''}`}
+                aria-pressed={selectedElementIds.includes(element.id)}
+                onClick={(event) => selectElement(element.id, event.shiftKey || event.metaKey || event.ctrlKey)}
               >
                 <span className="layer-type-mark">{element.type.slice(0, 1).toUpperCase()}</span>
                 <span>{element.type === 'chat_message' ? element.props.text : element.type}</span>
@@ -505,6 +714,15 @@ export function ComicEditor({
             )))}
             {page.panels.every((panel) => panel.elements.length === 0) && <p className="editor-empty-layers">当前页面还没有内容图层。</p>}
           </div>
+          <p className="editor-selection-hint">按 Shift、⌘ 或 Ctrl 点击图层可多选。</p>
+          {selectedElementIds.length > 1 && (
+            <div className="selected-group-controls" aria-label="多图层选择">
+              <strong>已选择 {selectedElementIds.length} 个图层</strong>
+              <label>整体水平位移（px）<input aria-label="整体水平位移" type="number" value={groupMoveX} onChange={(event) => setGroupMoveX(event.currentTarget.value)} /></label>
+              <label>整体垂直位移（px）<input aria-label="整体垂直位移" type="number" value={groupMoveY} onChange={(event) => setGroupMoveY(event.currentTarget.value)} /></label>
+              <button className="button button-secondary" type="button" onClick={applyGroupMove}>整体移动所选图层</button>
+            </div>
+          )}
           {selectedElement && (
             <div className="selected-element-card" aria-label="选中图层详情">
               <span>选中图层</span>

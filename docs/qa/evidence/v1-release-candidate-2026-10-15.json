@@ -1,0 +1,30 @@
+{
+  "version": "1.0.0-rc.1+g6796209",
+  "kind": "local-source-release-candidate",
+  "source_ref": "codex/v1-implementation",
+  "source_revision": "6796209ff8aa3b694e6dd182adc12853b4c4fdef",
+  "artifact": {
+    "path": "release-artifacts/ip-studio-v1.0.0-rc.1+g6796209.tar.gz",
+    "format": "git archive tar.gz",
+    "size_bytes": 717225,
+    "sha256": "a07e005db387fd36d6c1861713878967a0bd7ad160e622c6bcc1abf5b8358883"
+  },
+  "verification": {
+    "executed_from": "extracted release archive",
+    "dependency_install": [
+      "pnpm install --frozen-lockfile",
+      "uv sync --project services/api --locked --group dev",
+      "pnpm --filter @ip-studio/web exec playwright install chromium"
+    ],
+    "command": "bash scripts/verify-v1.sh",
+    "result": {
+      "fastapi_pytest": "104 passed",
+      "vitest": "73 passed",
+      "playwright_chromium": "16 passed",
+      "vite_typescript_production_build": "passed"
+    },
+    "log": "docs/qa/evidence/verify-v1-v1.0.0-rc.1-g6796209.log"
+  },
+  "release_status": "candidate only; not an official tag, published release, or production deployment",
+  "verified_date": "2026-10-15"
+}

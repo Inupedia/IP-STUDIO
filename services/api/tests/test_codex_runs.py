@@ -14,6 +14,7 @@ from app.main import create_app
 from app.codex.image_result import ImageResultError, validate_image_result
 from app.codex.capabilities import CapabilityReport
 from app.codex.adapter import generate_image
+from app.codex.app_server import ImageGenerationHistoryItem
 
 TEST_EMAIL = "codex-run-admin@example.test"
 TEST_PASSWORD = "test-password-long-enough"
@@ -180,6 +181,22 @@ def test_adapter_attaches_verified_references_and_requires_native_imagegen_event
     tmp_path, monkeypatch
 ) -> None:
     task_id = str(uuid4())
+    thread_id = "018f2f70-6af7-7a4b-b1d1-0d21db2db921"
+    non_native_thread_id = "018f2f70-6af7-7a4b-b1d1-0d21db2db922"
+    codex_home = tmp_path / "codex-home"
+    generated_dir = codex_home / "generated_images" / thread_id
+    generated_dir.mkdir(parents=True)
+    native_saved_path = generated_dir / "native.png"
+    native_saved_path.write_bytes(png_bytes())
+    monkeypatch.setenv("CODEX_HOME", str(codex_home))
+    monkeypatch.setattr(
+        "app.codex.adapter.read_thread_image_generation_items",
+        lambda _path, captured_thread_id, **_kwargs: (
+            [ImageGenerationHistoryItem(status="completed", saved_path=str(native_saved_path))]
+            if captured_thread_id == thread_id
+            else []
+        ),
+    )
     observed: dict[str, object] = {}
 
     class FakeProcess:
@@ -190,8 +207,8 @@ def test_adapter_attaches_verified_references_and_requires_native_imagegen_event
             observed["kwargs"] = kwargs
             observed["cwd"] = cwd
             stdout.write(json.dumps({
-                "type": "item.completed",
-                "item": {"type": "image_generation_call", "status": "completed"},
+                "type": "thread.started",
+                "thread_id": thread_id,
             }) + "\n")
             (Path(cwd) / "result.png").write_bytes(png_bytes())
 
@@ -215,13 +232,18 @@ def test_adapter_attaches_verified_references_and_requires_native_imagegen_event
     command = observed["command"]
     assert generated.image.mime == "image/png"
     assert any(str(argument).endswith("assets/reference.png") for argument in command)
+    assert "--ephemeral" not in command
     assert observed["cwd"] == job_dir.resolve()
     assert "shell" not in observed["kwargs"]
     assert (job_dir / "references/assets/reference.png").is_file()
+    assert not native_saved_path.exists()
 
     class NonNativeProcess(FakeProcess):
         def __init__(self, command, *, cwd, stdout, **kwargs):
-            stdout.write(json.dumps({"type": "turn.completed", "item": {}}) + "\n")
+            stdout.write(json.dumps({
+                "type": "thread.started",
+                "thread_id": non_native_thread_id,
+            }) + "\n")
             (Path(cwd) / "result.png").write_bytes(png_bytes())
 
     monkeypatch.setattr("app.codex.adapter.subprocess.Popen", NonNativeProcess)

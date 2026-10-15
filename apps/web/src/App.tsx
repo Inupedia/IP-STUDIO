@@ -1,11 +1,12 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { lazy, Suspense, useEffect, useState, type FormEvent } from 'react';
 import type { AdminProfile, IP } from '@ip-studio/contracts/domain';
 import { AssetLibrary } from './features/assets/AssetLibrary';
 import { BibleEditor } from './features/bibles/BibleEditor';
 import { IpList } from './features/ips/IpList';
 import { ApiError, api, authExpiredEvent, getAccessToken, setAccessToken } from './lib/api';
 
-type WorkspaceView = 'assets' | 'bibles';
+type WorkspaceView = 'assets' | 'bibles' | 'comics';
+const ComicWorkspace = lazy(() => import('./features/story/ComicWorkspace').then((module) => ({ default: module.ComicWorkspace })));
 
 function Brand() {
   return (
@@ -89,8 +90,19 @@ export default function App() {
   const [ips, setIps] = useState<IP[]>([]);
   const [selectedIpId, setSelectedIpId] = useState('');
   const [view, setView] = useState<WorkspaceView>('assets');
+  const [comicWorkspaceDirty, setComicWorkspaceDirty] = useState(false);
   const [loading, setLoading] = useState(Boolean(token));
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!comicWorkspaceDirty) return;
+    const warnBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', warnBeforeUnload);
+    return () => window.removeEventListener('beforeunload', warnBeforeUnload);
+  }, [comicWorkspaceDirty]);
 
   useEffect(() => {
     const onExpired = () => setToken(null);
@@ -135,13 +147,32 @@ export default function App() {
     };
   }, [token]);
 
+  function confirmLeaveComicWorkspace() {
+    if (view !== 'comics' || !comicWorkspaceDirty) return true;
+    const discard = window.confirm('漫画工作台有未保存内容。离开会丢弃这些更改，仍要继续吗？');
+    if (discard) setComicWorkspaceDirty(false);
+    return discard;
+  }
+
+  function changeView(nextView: WorkspaceView) {
+    if (nextView === view || !confirmLeaveComicWorkspace()) return;
+    setView(nextView);
+  }
+
+  function changeSelectedIp(nextIpId: string) {
+    if (nextIpId === selectedIpId || !confirmLeaveComicWorkspace()) return;
+    setSelectedIpId(nextIpId);
+  }
+
   async function createIp(payload: { code: string; name: string; summary?: string | null }) {
+    if (!confirmLeaveComicWorkspace()) return;
     const created = await api.createIp(payload);
     setIps((current) => [...current, created]);
     setSelectedIpId(created.id);
   }
 
   function signOut() {
+    if (!confirmLeaveComicWorkspace()) return;
     setAccessToken(null);
     setToken(null);
     setAdmin(null);
@@ -177,7 +208,7 @@ export default function App() {
           <IpList
             ips={ips}
             selectedIpId={selectedIpId}
-            onSelect={setSelectedIpId}
+            onSelect={changeSelectedIp}
             onCreate={createIp}
           />
           <main className="workspace-main" aria-labelledby="workspace-title">
@@ -204,7 +235,7 @@ export default function App() {
                     role="tab"
                     aria-selected={view === 'assets'}
                     className={view === 'assets' ? 'is-active' : ''}
-                    onClick={() => setView('assets')}
+                    onClick={() => changeView('assets')}
                   >
                     素材库
                   </button>
@@ -213,17 +244,30 @@ export default function App() {
                     role="tab"
                     aria-selected={view === 'bibles'}
                     className={view === 'bibles' ? 'is-active' : ''}
-                    onClick={() => setView('bibles')}
+                    onClick={() => changeView('bibles')}
                   >
                     角色与画风
                   </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={view === 'comics'}
+                    className={view === 'comics' ? 'is-active' : ''}
+                    onClick={() => changeView('comics')}
+                  >
+                    漫画工作台
+                  </button>
                 </div>
-                {view === 'assets' ? (
+                {view === 'comics' ? (
+                  <Suspense fallback={<section className="loading-workspace" role="status">正在打开漫画工作台…</section>}>
+                    <ComicWorkspace key={selectedIp.id} ip={selectedIp} onDirtyChange={setComicWorkspaceDirty} />
+                  </Suspense>
+                ) : view === 'assets' ? (
                   <AssetLibrary
                     api={api}
                     ips={ips}
                     selectedIpId={selectedIp.id}
-                    onSelectIp={setSelectedIpId}
+                    onSelectIp={changeSelectedIp}
                   />
                 ) : (
                   <BibleEditor api={api} ip={selectedIp} onDefaultStyleSet={updateDefaultStyle} />

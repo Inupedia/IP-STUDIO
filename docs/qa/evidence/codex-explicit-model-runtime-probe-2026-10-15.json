@@ -1,0 +1,16 @@
+{
+  "checked_at": "2026-10-15T02:29:42.006420+00:00",
+  "runtime_path": "/opt/homebrew/bin/codex",
+  "runtime_version": "codex-cli 0.162.1",
+  "model": "gpt-6.1-sol",
+  "feature_explicitly_enabled": true,
+  "invocation": "standalone codex exec; not an IP Studio API-owned administrator probe",
+  "exit_code": 0,
+  "native_image_generation_event": false,
+  "png_exists": true,
+  "png_bytes": 1456381,
+  "png_decoded": true,
+  "image_width": 1254,
+  "image_height": 1254,
+  "api_owned_ac25_gate_passed": false
+}

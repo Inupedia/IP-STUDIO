@@ -1,0 +1,66 @@
+{
+  "fixture_note": "Only generated 1x1 placeholder PNG pixels are used; no third-party character art is included.",
+  "admin": { "id": "10000000-0000-4000-8000-000000000001", "workspace_id": "10000000-0000-4000-8000-000000000002", "email": "e2e@example.test", "is_admin": true },
+  "ip": { "id": "10000000-0000-4000-8000-000000000010", "code": "KAZI", "name": "人间卡顿局", "summary": "办公室日常漫画", "status": "active", "default_style_version_id": null, "created_at": "2026-10-14T00:00:00Z" },
+  "series": { "id": "10000000-0000-4000-8000-000000000020", "ip_id": "10000000-0000-4000-8000-000000000010", "name": "加班日常", "summary": "卡仔与朋友的办公室生活", "created_at": "2026-10-14T00:00:00Z" },
+  "episodes": [
+    { "id": "10000000-0000-4000-8000-000000000030", "series_id": "10000000-0000-4000-8000-000000000020", "number": 1, "title": "在吗？", "status": "draft", "created_at": "2026-10-14T00:00:00Z" },
+    { "id": "10000000-0000-4000-8000-000000000031", "series_id": "10000000-0000-4000-8000-000000000020", "number": 2, "title": "今天又加班", "status": "draft", "created_at": "2026-10-14T00:00:00Z" }
+  ],
+  "brand_template_id": "10000000-0000-4000-8000-000000000040",
+  "brand_version_id": "10000000-0000-4000-8000-000000000041",
+  "brand": {
+    "schema_version": "1.0",
+    "width": 1080,
+    "height": 1440,
+    "locked_elements": [
+      { "id": "background", "kind": "background", "locked": true, "x": 0, "y": 0, "width": 1080, "height": 1440, "fill": "#f4f0e8", "opacity": 1 },
+      { "id": "logo", "kind": "logo", "locked": true, "x": 48, "y": 40, "width": 120, "height": 60, "fill": "#243a2d", "opacity": 1 },
+      { "id": "footer", "kind": "footer", "locked": true, "x": 48, "y": 1380, "width": 984, "height": 24, "fill": "#ded9ce", "opacity": 1 }
+    ],
+    "dynamic_slots": {
+      "title": { "x": 180, "y": 40, "width": 700, "height": 100, "font_family": "sans-serif", "font_size": 48, "color": "#243a2d", "align": "center" },
+      "episode_number": { "x": 900, "y": 48, "width": 120, "height": 52, "font_family": "sans-serif", "font_size": 28, "color": "#243a2d", "align": "right" }
+    }
+  },
+  "assets": [
+    { "asset_id": "10000000-0000-4000-8000-000000000050", "asset_version_id": "10000000-0000-4000-8000-000000000051", "workspace_id": "10000000-0000-4000-8000-000000000002", "owner_ip_id": "10000000-0000-4000-8000-000000000010", "type": "scene", "name": "占位画面 A", "status": "approved", "source_type": "uploaded", "version_no": 1, "sha256": "a0", "mime": "image/png", "byte_size": 68, "width": 1, "height": 1, "alpha": true, "created_at": "2026-10-14T00:00:00Z" },
+    { "asset_id": "10000000-0000-4000-8000-000000000052", "asset_version_id": "10000000-0000-4000-8000-000000000053", "workspace_id": "10000000-0000-4000-8000-000000000002", "owner_ip_id": "10000000-0000-4000-8000-000000000010", "type": "scene", "name": "占位画面 B", "status": "approved", "source_type": "uploaded", "version_no": 1, "sha256": "b0", "mime": "image/png", "byte_size": 68, "width": 1, "height": 1, "alpha": true, "created_at": "2026-10-14T00:00:00Z" }
+  ],
+  "documents": {
+    "10000000-0000-4000-8000-000000000030": {
+      "revision": 1,
+      "document": {
+        "schema_version": "1.0", "episode_id": "10000000-0000-4000-8000-000000000030", "revision": 1, "style_version_id": null, "brand_template_version_id": "10000000-0000-4000-8000-000000000041",
+        "dynamic_fields": { "title": "在吗？", "episode_number": "EP.01" },
+        "pages": [{ "id": "10000000-0000-4000-8000-000000000060", "width": 1080, "height": 1440, "order": 1, "layout_code": "custom", "brand_template_version_id": "10000000-0000-4000-8000-000000000041", "panels": [
+          { "id": "10000000-0000-4000-8000-000000000061", "rect": { "x": 48, "y": 48, "width": 984, "height": 254 }, "elements": [
+            { "id": "10000000-0000-4000-8000-000000000070", "type": "chat_message", "props": { "self_participant_id": "10000000-0000-4000-8000-000000000001", "sender_id": "10000000-0000-4000-8000-000000000071", "text": "在吗？", "sent_at": "22:17", "theme": "light" }, "transform": { "x": 24, "y": 32, "width": 400, "height": 104, "rotation": 0 }, "opacity": 1, "z_index": 1, "locked": false },
+            { "id": "10000000-0000-4000-8000-000000000072", "type": "chat_message", "props": { "self_participant_id": "10000000-0000-4000-8000-000000000001", "sender_id": "10000000-0000-4000-8000-000000000001", "text": "不在。", "sent_at": "22:19", "theme": "light" }, "transform": { "x": 544, "y": 142, "width": 400, "height": 104, "rotation": 0 }, "opacity": 1, "z_index": 2, "locked": false }
+          ] },
+          { "id": "10000000-0000-4000-8000-000000000062", "rect": { "x": 48, "y": 320, "width": 984, "height": 254 }, "elements": [ { "id": "10000000-0000-4000-8000-000000000073", "type": "image", "asset_version_id": "10000000-0000-4000-8000-000000000051", "transform": { "x": 40, "y": 30, "width": 400, "height": 180, "rotation": 0 }, "crop": { "x": 0, "y": 0, "width": 1, "height": 1 }, "opacity": 1, "z_index": 1, "locked": false } ] },
+          { "id": "10000000-0000-4000-8000-000000000063", "rect": { "x": 48, "y": 592, "width": 984, "height": 254 }, "elements": [ { "id": "10000000-0000-4000-8000-000000000074", "type": "image", "asset_version_id": "10000000-0000-4000-8000-000000000051", "transform": { "x": 40, "y": 30, "width": 400, "height": 180, "rotation": 0 }, "crop": { "x": 0, "y": 0, "width": 1, "height": 1 }, "opacity": 1, "z_index": 1, "locked": false } ] },
+          { "id": "10000000-0000-4000-8000-000000000064", "rect": { "x": 48, "y": 864, "width": 984, "height": 254 }, "elements": [ { "id": "10000000-0000-4000-8000-000000000075", "type": "text", "props": { "text": "会议还没结束", "font_family": "sans-serif", "font_size": 36, "font_weight": 400, "color": "#242923", "align": "left", "line_height": 1.3, "letter_spacing": 0 }, "transform": { "x": 40, "y": 30, "width": 500, "height": 100, "rotation": 0 }, "opacity": 1, "z_index": 1, "locked": false } ] },
+          { "id": "10000000-0000-4000-8000-000000000065", "rect": { "x": 48, "y": 1136, "width": 984, "height": 254 }, "elements": [] }
+        ] }]
+      }
+    },
+    "10000000-0000-4000-8000-000000000031": {
+      "revision": 1,
+      "document": {
+        "schema_version": "1.0", "episode_id": "10000000-0000-4000-8000-000000000031", "revision": 1, "style_version_id": null, "brand_template_version_id": "10000000-0000-4000-8000-000000000041",
+        "dynamic_fields": { "title": "今天又加班", "episode_number": "EP.02" },
+        "pages": [{ "id": "10000000-0000-4000-8000-000000000066", "width": 1080, "height": 1440, "order": 1, "layout_code": "custom", "brand_template_version_id": "10000000-0000-4000-8000-000000000041", "panels": [
+          { "id": "10000000-0000-4000-8000-000000000067", "rect": { "x": 48, "y": 48, "width": 984, "height": 254 }, "elements": [
+            { "id": "10000000-0000-4000-8000-000000000076", "type": "chat_message", "props": { "self_participant_id": "10000000-0000-4000-8000-000000000001", "sender_id": "10000000-0000-4000-8000-000000000071", "text": "还没下班？", "sent_at": "22:17", "theme": "light" }, "transform": { "x": 24, "y": 32, "width": 400, "height": 104, "rotation": 0 }, "opacity": 1, "z_index": 1, "locked": false },
+            { "id": "10000000-0000-4000-8000-000000000077", "type": "chat_message", "props": { "self_participant_id": "10000000-0000-4000-8000-000000000001", "sender_id": "10000000-0000-4000-8000-000000000001", "text": "我去开会。", "sent_at": "22:19", "theme": "light" }, "transform": { "x": 544, "y": 142, "width": 400, "height": 104, "rotation": 0 }, "opacity": 1, "z_index": 2, "locked": false }
+          ] },
+          { "id": "10000000-0000-4000-8000-000000000068", "rect": { "x": 48, "y": 320, "width": 984, "height": 254 }, "elements": [ { "id": "10000000-0000-4000-8000-000000000078", "type": "image", "asset_version_id": "10000000-0000-4000-8000-000000000051", "transform": { "x": 40, "y": 30, "width": 400, "height": 180, "rotation": 0 }, "crop": { "x": 0, "y": 0, "width": 1, "height": 1 }, "opacity": 1, "z_index": 1, "locked": false } ] },
+          { "id": "10000000-0000-4000-8000-000000000069", "rect": { "x": 48, "y": 592, "width": 984, "height": 254 }, "elements": [ { "id": "10000000-0000-4000-8000-000000000079", "type": "image", "asset_version_id": "10000000-0000-4000-8000-000000000051", "transform": { "x": 40, "y": 30, "width": 400, "height": 180, "rotation": 0 }, "crop": { "x": 0, "y": 0, "width": 1, "height": 1 }, "opacity": 1, "z_index": 1, "locked": false } ] },
+          { "id": "10000000-0000-4000-8000-000000000080", "rect": { "x": 48, "y": 864, "width": 984, "height": 254 }, "elements": [ { "id": "10000000-0000-4000-8000-000000000081", "type": "text", "props": { "text": "会议继续中", "font_family": "sans-serif", "font_size": 36, "font_weight": 400, "color": "#242923", "align": "left", "line_height": 1.3, "letter_spacing": 0 }, "transform": { "x": 40, "y": 30, "width": 500, "height": 100, "rotation": 0 }, "opacity": 1, "z_index": 1, "locked": false } ] },
+          { "id": "10000000-0000-4000-8000-000000000082", "rect": { "x": 48, "y": 1136, "width": 984, "height": 254 }, "elements": [] }
+        ] }]
+      }
+    }
+  }
+}

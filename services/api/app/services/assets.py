@@ -90,6 +90,26 @@ def get_asset(
     return _latest_asset_record(session, workspace_id, ip_id, asset_id)
 
 
+def get_asset_version(
+    session: Session, workspace_id: UUID, ip_id: UUID, version_id: UUID
+) -> AssetRecord:
+    _require_ip(session, workspace_id, ip_id)
+    row = session.execute(
+        select(Asset, AssetVersion, Blob)
+        .join(AssetVersion, AssetVersion.asset_id == Asset.id)
+        .join(Blob, Blob.id == AssetVersion.blob_id)
+        .where(
+            AssetVersion.id == version_id,
+            Asset.workspace_id == workspace_id,
+            Asset.owner_ip_id == ip_id,
+        )
+        .limit(1)
+    ).first()
+    if row is None:
+        raise ResourceNotFound("Asset version not found")
+    return AssetRecord(*row)
+
+
 def create_asset_version(
     session: Session,
     workspace_id: UUID,

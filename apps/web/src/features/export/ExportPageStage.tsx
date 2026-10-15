@@ -78,7 +78,8 @@ export function ExportPageStage({
         assetSources={assetSources}
         onSelect={() => undefined}
         onEditText={() => undefined}
-        onTransform={() => undefined}
+        onDragStart={() => undefined}
+        onPositionChange={() => undefined}
       />
       <BrandLayer
         brand={brand}
