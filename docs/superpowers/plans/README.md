@@ -4,7 +4,7 @@
 > 需求权威：[`docs/product/PRD-v1.md`](../../product/PRD-v1.md)
 > 设计：[`docs/superpowers/specs/2026-10-14-ip-studio-v1-design.md`](../specs/2026-10-14-ip-studio-v1-design.md)
 
-以下文件是原始实施计划，描述各阶段的 Task / Interfaces / RED–GREEN–COMMIT 要求；实际完成状态以 [`PROGRESS.md`](PROGRESS.md) 和 QA 验收/发布检查表为准。阶段 01–04 与阶段 05 的 Task 1–4 已完成；阶段 05 Task 5 的独立 PR 审查、合并、正式版本制品和实际生产主机验证仍未完成。
+以下文件是原始实施计划，描述各阶段的 Task / Interfaces / RED–GREEN–COMMIT 要求；实际完成状态以 [`PROGRESS.md`](PROGRESS.md) 和 QA 验收/发布检查表为准。阶段 01–04 与阶段 05 的 Task 1–4 已完成；阶段 05 Task 5 的独立只读静态审查已完成，PR 合并、正式版本制品和实际生产主机验证仍未完成。
 
 | 顺序 | 实施计划 | 核心交付 | 依赖 |
 |---|---|---|---|
