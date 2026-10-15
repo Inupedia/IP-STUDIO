@@ -138,6 +138,6 @@ native tool run even when the CLI produced a decodable PNG.
   disposable SQLite/Blob environment. Direct App Server verification confirmed the throwaway probe
   thread and image could be deleted. Sanitized evidence:
   [AC-25 App Server readback](../../qa/evidence/ac25-native-imagegen-app-server-readback-2026-10-15.json).
-- [ ] **Step 5: Commit and remote verification** — current full verifier and author self-review
-  passed; pending commit, push, independent PR review, and new CI results.
+- [ ] **Step 5: Commit and remote verification** — full verifier and author self-review passed;
+  commit `b6547fb` is created. Push, independent PR review, and new CI results are pending.
 
