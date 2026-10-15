@@ -18,6 +18,7 @@ from pydantic import BaseModel, ConfigDict
 
 from app.codex.app_server import (
     ImageGenerationHistoryItem,
+    cleanup_generated_image_directory,
     cleanup_generated_image_files,
     read_thread_image_generation_items,
     thread_id_from_jsonl,
@@ -199,6 +200,7 @@ def run_image_generation_probe(
                         cleanup_generated_image_files(items, thread_id)
                     except (OSError, RuntimeError, TimeoutError, subprocess.SubprocessError):
                         pass
+                    cleanup_generated_image_directory(thread_id)
                 return ImageGenerationProbeResult(
                     verified=False,
                     reason="Codex ImageGen 探测超时。",
@@ -217,6 +219,7 @@ def run_image_generation_probe(
                         cleanup_generated_image_files(items, thread_id)
                     except (OSError, RuntimeError, TimeoutError, subprocess.SubprocessError):
                         pass
+                    cleanup_generated_image_directory(thread_id)
                 return ImageGenerationProbeResult(
                     verified=False,
                     reason=f"Codex ImageGen 探测命令失败（退出码 {result.returncode}）。",
@@ -231,6 +234,7 @@ def run_image_generation_probe(
             try:
                 items = read_thread_items(codex_path, thread_id)
             except (OSError, RuntimeError, TimeoutError, subprocess.SubprocessError):
+                cleanup_generated_image_directory(thread_id)
                 return ImageGenerationProbeResult(
                     verified=False,
                     reason="Codex App Server 未能回读本次运行的原生 ImageGen 记录。",
@@ -262,6 +266,7 @@ def run_image_generation_probe(
                 )
             finally:
                 cleanup_generated_image_files(items, thread_id)
+                cleanup_generated_image_directory(thread_id)
     except (ImageResultError, OSError, AssetValidationError, ValueError, RuntimeError, TimeoutError):
         return ImageGenerationProbeResult(
             verified=False,

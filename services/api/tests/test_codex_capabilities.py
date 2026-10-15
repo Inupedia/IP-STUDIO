@@ -265,6 +265,43 @@ def test_imagegen_probe_rejects_output_that_does_not_match_native_saved_png(tmp_
     assert not generated_path.exists()
 
 
+def test_imagegen_probe_cleans_thread_scoped_png_when_history_read_fails(tmp_path, monkeypatch) -> None:
+    thread_id = "018f2f70-6af7-7a4b-b1d1-0d21db2db91e"
+    codex_home = tmp_path / "codex-home"
+    generated_dir = codex_home / "generated_images" / thread_id
+    generated_dir.mkdir(parents=True)
+    generated_path = generated_dir / "orphan.png"
+    generated_path.write_bytes(png_bytes())
+    marker_path = generated_dir / "keep.txt"
+    marker_path.write_text("preserve non-image files", encoding="utf-8")
+    other_thread_id = "018f2f70-6af7-7a4b-b1d1-0d21db2db91f"
+    other_thread_dir = codex_home / "generated_images" / other_thread_id
+    other_thread_dir.mkdir(parents=True)
+    other_thread_png = other_thread_dir / "keep.png"
+    other_thread_png.write_bytes(png_bytes())
+    monkeypatch.setenv("CODEX_HOME", str(codex_home))
+
+    def command_runner(_args: list[str], **kwargs: object) -> SimpleNamespace:
+        kwargs["stdout"].write(json.dumps({"type": "thread.started", "thread_id": thread_id}) + "\n")
+        return SimpleNamespace(returncode=0)
+
+    def failed_history_read(_codex_path: str, _thread_id: str) -> list[ImageGenerationHistoryItem]:
+        raise RuntimeError("simulated App Server history failure")
+
+    result = run_image_generation_probe(
+        "/opt/codex",
+        temp_root=tmp_path,
+        command_runner=command_runner,
+        thread_image_generation_reader=failed_history_read,
+    )
+
+    assert result.verified is False
+    assert result.image is None
+    assert not generated_path.exists()
+    assert marker_path.read_text(encoding="utf-8") == "preserve non-image files"
+    assert other_thread_png.exists()
+
+
 def test_capability_endpoint_is_admin_only_and_does_not_trigger_image_generation(
     tmp_path, monkeypatch
 ) -> None:

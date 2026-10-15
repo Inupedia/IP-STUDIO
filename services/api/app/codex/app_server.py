@@ -247,6 +247,29 @@ def cleanup_generated_image_files(
             pass
 
 
+def cleanup_generated_image_directory(thread_id: str) -> None:
+    """Remove unreferenced PNGs from this run's Codex-owned thread directory."""
+    try:
+        normalized_thread_id = str(UUID(thread_id))
+        codex_home = Path(os.environ.get("CODEX_HOME", Path.home() / ".codex")).expanduser()
+        generated_root = (codex_home / "generated_images").resolve()
+        thread_dir = generated_root / normalized_thread_id
+        if thread_dir.is_symlink():
+            return
+        resolved_dir = thread_dir.resolve(strict=True)
+        if resolved_dir.parent != generated_root or not resolved_dir.is_dir():
+            return
+        for path in resolved_dir.iterdir():
+            if path.suffix.casefold() != ".png" or path.is_symlink() or not path.is_file():
+                continue
+            safe_path = _safe_generated_image_path(str(path), normalized_thread_id)
+            if safe_path is not None:
+                safe_path.unlink(missing_ok=True)
+        resolved_dir.rmdir()
+    except (OSError, RuntimeError, ValueError):
+        pass
+
+
 def validate_native_image_generation_output(
     items: list[ImageGenerationHistoryItem],
     thread_id: str,

@@ -132,13 +132,14 @@ native tool run even when the CLI produced a decodable PNG.
   the local public App Server `thread/read`, require a completed `imageGeneration` item and exact
   PNG match, then delete the probe thread and its per-thread Codex PNG. Generation runs use the
   same verifier before an asset can become a `codex_native` candidate.
-- [x] **Step 4: Verify** — 23 focused API tests passed. Authenticated FastAPI administrator probe
-  returned `available/e2e_verified=true` with Homebrew CLI `0.162.1`; a second real API-owned run
-  created a pending-review `codex_native` candidate, and admin approval moved it to `approved` in a
-  disposable SQLite/Blob environment. Direct App Server verification confirmed the throwaway probe
-  thread and image could be deleted. Sanitized evidence:
+- [x] **Step 4: Verify** — 24 focused API tests passed. Authenticated FastAPI administrator probe
+  returned `available/e2e_verified=true` with Homebrew CLI `0.162.1`; a real API-owned run on the
+  cleanup-fix tree created a pending-review `codex_native` candidate, and admin approval moved it to
+  `approved` in a disposable SQLite/Blob environment. Direct App Server verification confirmed the
+  throwaway probe thread and image could be deleted. Sanitized evidence:
   [AC-25 App Server readback](../../qa/evidence/ac25-native-imagegen-app-server-readback-2026-10-15.json).
 - [ ] **Step 5: Commit and remote verification** — full verifier and author self-review passed;
-  commits `b6547fb` and `bc816e8` are pushed to PR #1. Push/PR CI and GitGuardian passed;
-  independent PR review is pending.
+  commits `b6547fb`, `bc816e8`, and `0ac1a95` are pushed to PR #1. Push/PR CI and GitGuardian passed
+  before the thread-directory cleanup fix; that fix awaits commit, push, and fresh CI. Independent
+  PR review is pending.
 

@@ -13,6 +13,7 @@ from zipfile import BadZipFile, ZipFile
 
 from app.codex.app_server import (
     ImageGenerationHistoryItem,
+    cleanup_generated_image_directory,
     cleanup_generated_image_files,
     read_thread_image_generation_items,
     thread_id_from_jsonl,
@@ -255,6 +256,7 @@ def generate_image(
     finally:
         if thread_id is not None:
             cleanup_generated_image_files(image_items, thread_id)
+            cleanup_generated_image_directory(thread_id)
 
 
 def _manifest_task_id(bundle: bytes) -> str:

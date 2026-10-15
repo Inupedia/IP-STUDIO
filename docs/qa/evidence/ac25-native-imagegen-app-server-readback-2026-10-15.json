@@ -27,6 +27,20 @@
     "admin_approval_http_status": 200,
     "status_after_admin_review": "approved"
   },
+  "reverification_after_thread_directory_cleanup": {
+    "based_on_head": "0ac1a95",
+    "api_owned_probe": "available/e2e_verified=true",
+    "real_codex_run": "candidate_ready",
+    "candidate_review": "pending_review -> approved",
+    "database_and_blob_storage": "temporary directories removed after the run",
+    "image_payload_recorded": false
+  },
+  "read_history_failure_cleanup_regression": {
+    "test": "test_imagegen_probe_cleans_thread_scoped_png_when_history_read_fails",
+    "red_green": true,
+    "removes_only": "direct PNG files in the run's Codex generated_images/<thread-id> directory",
+    "preserves": "non-PNG files and files under every other thread directory"
+  },
   "cli_jsonl_observation": {
     "version": "codex-cli 0.162.1",
     "explicit_model_and_image_generation_feature": true,
