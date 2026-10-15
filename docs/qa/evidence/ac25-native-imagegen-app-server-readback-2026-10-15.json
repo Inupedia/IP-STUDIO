@@ -29,6 +29,7 @@
   },
   "reverification_after_thread_directory_cleanup": {
     "based_on_head": "0ac1a95",
+    "cleanup_fix_commit": "69f896a",
     "api_owned_probe": "available/e2e_verified=true",
     "real_codex_run": "candidate_ready",
     "candidate_review": "pending_review -> approved",

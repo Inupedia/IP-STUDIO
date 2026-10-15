@@ -140,6 +140,6 @@ native tool run even when the CLI produced a decodable PNG.
   [AC-25 App Server readback](../../qa/evidence/ac25-native-imagegen-app-server-readback-2026-10-15.json).
 - [ ] **Step 5: Commit and remote verification** — full verifier and author self-review passed;
   commits `b6547fb`, `bc816e8`, and `0ac1a95` are pushed to PR #1. Push/PR CI and GitGuardian passed
-  before the thread-directory cleanup fix; that fix awaits commit, push, and fresh CI. Independent
-  PR review is pending.
+  before the thread-directory cleanup fix. Fix commit `69f896a` is created; push and fresh CI are
+  pending. Independent PR review is pending.
 
