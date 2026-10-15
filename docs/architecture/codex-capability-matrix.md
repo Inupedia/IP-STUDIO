@@ -17,10 +17,13 @@ reports `available`.
 | Provider advertises ImageGen | Yes | All three App Servers reported `imageGeneration: true`; this is only capability advertisement, not successful inference. |
 | Real native ImageGen output | Yes, for this local Codex session | An explicit `codex exec` call invoked native ImageGen, saved a PNG in the Codex-generated output directory, and copied it to `/tmp/ip-studio-imagegen-probe/probe.png` |
 | PNG integrity | Passed | `file` identified PNG; Pillow `Image.verify()` and a full decode succeeded; 1254×1254 RGB, 1,627,707 bytes |
-| IP Studio API-owned administrator probe (2026-10-14, PostgreSQL) | `unavailable` | Authenticated FastAPI requests confirmed `imageGeneration: true`, but the CLI did not record a successful native ImageGen event or bounded PNG; one retry exited `1`. The API correctly refused to mark the capability available, so no native run or candidate was created. |
+| IP Studio API-owned administrator probe (2026-10-14, PostgreSQL) | `unavailable` (historical) | The first implementation required an ImageGen event in `codex exec --json`, which CLI `0.162.1` omitted; an earlier retry exited `1`. The probe correctly refused to mark the capability available. Superseded by the successful App Server history readback below. |
 | Follow-up isolated API probe (2026-10-14, SQLite) | Inconclusive | The authenticated request did not return a report and was manually interrupted. Its temporary directory was cleaned up; no event log or PNG was retained for verification. This attempt changes neither the earlier API result nor AC-25. |
 | Desktop-bundled CLI API probe (2026-10-15, SQLite) | `unavailable` | The authenticated `POST /api/v1/codex/capabilities/probe` returned `Codex ImageGen 探测超时。` with CLI `0.162.0-alpha.17.2`, `image_generation_advertised: true`, `e2e_verified: false`; no verified path was cached and no run/candidate was created. Sanitized response: [evidence JSON](../qa/evidence/codex-bundled-runtime-probe-2026-10-15.json). |
 | Configured Cursor CLI API probe (2026-10-15, SQLite) | `unavailable` | `IP_STUDIO_CODEX_IMAGEGEN_EXECUTABLE` selected the independent `0.154.0-alpha.6.2` binary. The authenticated API returned exit code `1`; no native result passed validation, no path was cached, and no run/candidate was created. [Evidence JSON](../qa/evidence/codex-configured-runtime-probe-2026-10-15.json). |
+| Explicit model + feature CLI probe (2026-10-15, standalone) | PNG decoded; JSONL item absent | Homebrew CLI `0.162.1`, `--model gpt-6.1-sol --enable image_generation`, exited `0` and wrote a decodable 1254×1254 PNG. The standalone run is not API-owned and does not satisfy AC-25. [Evidence JSON](../qa/evidence/codex-explicit-model-runtime-probe-2026-10-15.json). |
+| App Server persisted-history readback (2026-10-15) | Passed | A persistent `codex exec --json` run produced a thread ID. The local public `thread/read` API returned `type=imageGeneration`, `status=completed`, and `savedPath` for that exact thread. The CLI JSONL serializer omitted the item, while App Server history retained it. A disposable session was then deleted through public `thread/delete`. |
+| API-owned administrator probe and candidate round trip (2026-10-15, SQLite) | Passed | Authenticated FastAPI `POST /api/v1/codex/capabilities/probe` with the Homebrew CLI returned `available` and `e2e_verified=true`; the saved native PNG matched the bounded probe output byte for byte and decoded. In the same API instance, a real Codex run created a `codex_native` candidate in `pending_review`; admin approval changed it to `approved`. The temporary DB/Blob store was discarded. [Sanitized evidence](../qa/evidence/ac25-native-imagegen-app-server-readback-2026-10-15.json). |
 | ChatGPT Web fallback | Always enabled | Existing manual task, prompt/reference ZIP, and browser upload path remain independent of the Codex probe |
 
 The first CLI attempt was rejected because the temporary directory was outside a trusted Git
@@ -32,32 +35,42 @@ or silently switch to a developer API.
 
 The API's `GET /api/v1/codex/capabilities` only reads CLI login and App Server provider capability;
 it does not run inference. `POST /api/v1/codex/capabilities/probe` is the explicit, usage-consuming
-probe. The API promotes the same CLI path and version to `available` only after its native
-ImageGen event is present and its bounded PNG output passes the normal image decoder. Successful
-probe output is temporary and is not imported as a project asset. A changed CLI path or version
-invalidates the cached result.
+probe. `codex exec --json` starts a persistent thread so the API can capture its `thread.started`
+ID, then asks the same local App Server to `thread/read` that thread. It requires a completed
+`imageGeneration` item, a PNG `savedPath` under that thread's Codex-owned generated-images folder,
+and byte-for-byte equality with the bounded PNG in the IP Studio job directory before decoding.
+The test thread and its Codex-generated image are removed after verification; probe output is not
+imported as a project asset. A changed CLI path or version invalidates the cached result.
 
-The concluded PostgreSQL-backed API attempts confirm why the second gate exists: provider
-advertisement alone is not enough. The CLI returned either no recognized native ImageGen event or
-exit code `1`, and the API did not verify a PNG. The actual generation run was therefore not
-started. A later isolated SQLite-backed request was interrupted before a report could be captured;
-it is inconclusive. The desktop-bundled CLI also timed out through the same API-owned probe. Neither
-result changes AC-25; keep ChatGPT Web manual generation available while no compatible runtime is
-available.
+The earlier PostgreSQL-backed attempts exposed a mismatch between `codex exec --json` and persisted
+Codex history: CLI `0.162.1` did not serialize the native ImageGen item into JSONL. The first API
+implementation treated that missing JSONL item as no native event. The standalone run itself had
+successfully generated a PNG, but that alone was insufficient evidence. Reading the same persistent
+thread through the public local App Server protocol resolved the mismatch; the API now verifies the
+native item and its saved PNG in one run. The desktop-bundled and Cursor-bundled CLIs remain
+unavailable in this host; the Homebrew runtime passed the API-owned probe and candidate round trip.
 
 ## ChatGPT-plan compatibility finding (researched 2026-10-15)
 
 OpenAI's [Sign in with ChatGPT preview limitations](https://developers.openai.com/siwc/token-sharing-open-source/preview-limitations)
-explicitly list Image Generation as unsupported for ChatGPT-plan use through the Responses API,
-both directly and through Codex App Server. The same document says App Server sends inference over
-HTTP/SSE to Responses and does not accept arbitrary Responses parameters. This rules out treating
-that documented App Server/Responses route as a supported ImageGen runtime.
+explicitly list Image Generation as unsupported for ChatGPT-plan inference through the Responses
+API, including inference initiated through Codex App Server. IP Studio does not use App Server for
+generation: it asks the local Codex CLI to run the native tool, then uses App Server's public,
+read-only `thread/read` method to inspect that CLI session's persisted history. The history protocol
+includes `ThreadItem::ImageGeneration` and exposes its completion status and saved path. This does
+not route ImageGen through the unsupported App Server/Responses inference path.
 
-IP Studio's administrator probe invokes `codex exec`, not `codex app-server`, and captures neither
-the effective transport nor stderr. The App Server limitation therefore does **not** prove why
-these `codex exec` subprocesses time out or exit `1`; the verified fact is only that no API-owned
-probe has produced both a successful native ImageGen event and a decodable PNG. Do not infer a
-single root cause from the similar symptoms.
+The mismatch is present in the version-pinned source: CLI JSONL maps a limited `ThreadItemDetails`
+set and drops unrecognized thread items, while core persisted history contains an
+`ImageGeneration` variant and App Server registers `thread/read`. See the [CLI JSONL mapper](https://github.com/openai/codex/blob/rust-v0.162.1/codex-rs/exec/src/event_processor_with_jsonl_output.rs),
+[persisted item types](https://github.com/openai/codex/blob/rust-v0.162.1/codex-rs/protocol/src/items.rs),
+and [App Server protocol registry](https://github.com/openai/codex/blob/rust-v0.162.1/codex-rs/app-server-protocol/src/protocol/common.rs).
+
+The earlier `codex exec --json` attempts time out or exit `1` for some bundled runtimes; the
+App Server inference limitation does **not** explain those failures. The Homebrew CLI `0.162.1`
+currently passed the API-owned probe after the API read back the native item from persisted history.
+Do not treat the unsupported inference path as a blanket limitation on App Server's read-only
+thread-history protocol.
 
 First-party Codex issue reports add evidence of a separate availability problem: [#37496](https://github.com/openai/codex/issues/37496)
 reports ChatGPT-authenticated CLI sessions with the `image_generation` flag enabled but no tool
@@ -68,11 +81,10 @@ on 2026-10-15; they are user reports, not maintainer-confirmed diagnoses or supp
 The first-party [ImageGen skill](https://github.com/openai/codex/blob/main/codex-rs/skills/src/assets/samples/imagegen/SKILL.md)
 defines built-in `image_gen` as the default path and says its CLI fallback requires `OPENAI_API_KEY`.
 That fallback is a separate developer API billing path and is excluded by this product's invariants.
-The research found no documented way to make an external IP Studio process invoke the current
-Codex task's session-injected `image_gen` tool, nor a supported CLI option that forces tool
-provisioning. Keep AC-25 blocked until a real local runtime passes the existing API-owned gate;
-ChatGPT Web manual generation/import remains the working fallback. Do not use private endpoints,
-browser credentials, or a developer API key to bypass the gate.
+This host's API uses the local CLI's native tool and public session-history protocol; it does not
+invoke a different task's injected tool. ChatGPT Web manual generation/import remains available as
+the fallback. Do not use private endpoints, browser credentials, or a developer API key to bypass
+the gate.
 
 IP Studio does not call ChatGPT private endpoints, read browser cookies, or use Plus as a developer
 API key. App Server/CLI authentication stays inside the installed Codex runtime. PostgreSQL
@@ -80,21 +92,21 @@ availability is unrelated to this capability check.
 
 ## Alternate local runtime check (2026-10-15)
 
-The host exposes four Codex executables: Homebrew stable `0.162.1`, the ChatGPT desktop-bundled
-`0.162.0-alpha.17.2`, the Cursor extension-bundled `0.154.0-alpha.6.2`, and the wrapper that
-resolves to the desktop-bundled binary. The distinct binaries authenticate as ChatGPT-plan users
-and advertise ImageGen, but their API-owned probes did not pass (timeout or exit code `1`). The
-desktop app itself is up to date. The [current
+The host exposes Homebrew stable `0.162.1`, the ChatGPT desktop-bundled `0.162.0-alpha.17.2`, and
+the Cursor extension-bundled `0.154.0-alpha.6.2`. All advertise ImageGen; only the Homebrew CLI
+passed the API-owned probe and candidate round trip after the service switched native-event
+verification to public App Server persisted-history readback. The desktop-bundled runtime timed
+out and the Cursor runtime exited `1`; neither was cached as available. The desktop app itself is
+up to date. The [current
 ChatGPT-plan compatibility limits](https://developers.openai.com/siwc/token-sharing-open-source/preview-limitations)
 say Image Generation is unsupported through Codex App Server's Responses path. The open upstream
 reports [#37496](https://github.com/openai/codex/issues/37496) and [#44039](https://github.com/openai/codex/issues/44039)
 also describe ChatGPT-authenticated CLI/desktop sessions where the tool is not provisioned despite
-the feature flag. These reports offer no supported fix. No installed, documented, policy-compliant
-runtime on this host currently satisfies AC-25. A future runtime must pass the same API-owned native
-event + PNG validation; do not switch to the paid Images/Responses API, private endpoints, or
+the feature flag; those reports did not match this successful local CLI session. These reports
+offer no general workaround. Do not switch to the paid Images/Responses API, private endpoints, or
 browser credentials.
 
 The API can select an operator-provided absolute CLI path using
 `IP_STUDIO_CODEX_IMAGEGEN_EXECUTABLE`. An invalid configured path returns `unavailable` without
-falling back to another executable found on `PATH`; a valid path is still gated by the real native
-ImageGen event and decoded PNG checks.
+falling back to another executable found on `PATH`; a valid path is still gated by a completed
+native App Server history item, a matching saved PNG, and full image decoding.

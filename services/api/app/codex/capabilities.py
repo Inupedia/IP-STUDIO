@@ -16,12 +16,21 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
-from app.storage.local_blobs import AssetValidationError, ImageInfo, inspect_image
+from app.codex.app_server import (
+    ImageGenerationHistoryItem,
+    cleanup_generated_image_files,
+    read_thread_image_generation_items,
+    thread_id_from_jsonl,
+    validate_native_image_generation_output,
+)
+from app.codex.image_result import ImageResultError
+from app.storage.local_blobs import AssetValidationError, ImageInfo
 
 CapabilityStatus = Literal["available", "unavailable", "needs_auth", "unsupported"]
 CommandRunner = Callable[..., subprocess.CompletedProcess[str]]
 ExecutableLookup = Callable[[str], str | None]
 AppServerProbe = Callable[[str], dict[str, object]]
+ThreadImageGenerationReader = Callable[[str, str], list[ImageGenerationHistoryItem]]
 
 
 class CapabilityReport(BaseModel):
@@ -122,51 +131,29 @@ def _read_app_server_capabilities(codex_path: str, timeout_seconds: float = 12.0
             process.wait(timeout=2)
 
 
-def _contains_image_generation_call(events_path: Path) -> bool:
-    if not events_path.is_file() or events_path.stat().st_size > 16 * 1024 * 1024:
-        return False
-    with events_path.open(encoding="utf-8") as events_file:
-        for line in events_file:
-            try:
-                event = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-            if not isinstance(event, dict) or event.get("type") not in {"item.completed", "item_complete"}:
-                continue
-            item = event.get("item")
-            if not isinstance(item, dict):
-                continue
-            item_type = item.get("type")
-            item_status = str(item.get("status", "")).casefold()
-            if item_type in {"imageGeneration", "image_generation_call"} and item_status in {
-                "completed", "succeeded", "success",
-            }:
-                return True
-            if item_type == "mcp_tool_call" and item_status in {"completed", "succeeded", "success"}:
-                tool_name = " ".join(
-                    str(item.get(key, ""))
-                    for key in ("server", "tool", "tool_name", "title")
-                ).casefold()
-                if "imagegen" in tool_name or "image_gen" in tool_name or "image generation" in tool_name:
-                    return True
-    return False
-
-
 def run_image_generation_probe(
     codex_path: str,
     *,
     temp_root: Path | None = None,
     command_runner: CommandRunner | None = None,
+    thread_image_generation_reader: ThreadImageGenerationReader | None = None,
     timeout_seconds: int = 240,
 ) -> ImageGenerationProbeResult:
     """Run only after an explicit administrator action; no generated output is imported."""
     run = command_runner or subprocess.run
+    read_thread_items = thread_image_generation_reader or (
+        lambda path, thread_id: read_thread_image_generation_items(
+            path,
+            thread_id,
+            timeout_seconds=min(30.0, max(5.0, float(timeout_seconds))),
+            delete_thread_after_read=True,
+        )
+    )
     try:
         with tempfile.TemporaryDirectory(prefix="ip-studio-imagegen-probe-", dir=temp_root) as raw_dir:
             work_dir = Path(raw_dir).resolve()
             output_path = work_dir / "probe.png"
             events_path = work_dir / "events.jsonl"
-            last_message_path = work_dir / "last-message.txt"
             prompt = (
                 "Use Codex's native ImageGen image_generation tool to create a simple square "
                 "test illustration of a mint-green paper lantern on a plain cream background, "
@@ -179,64 +166,103 @@ def run_image_generation_probe(
                 codex_path,
                 "exec",
                 "--skip-git-repo-check",
-                "--ephemeral",
                 "--json",
+                "--enable",
+                "image_generation",
                 "--sandbox",
                 "workspace-write",
                 "-C",
                 str(work_dir),
-                "--output-last-message",
-                str(last_message_path),
                 prompt,
             ]
-            with events_path.open("w", encoding="utf-8") as events_file:
-                result = run(
-                    command,
-                    cwd=work_dir,
-                    stdin=subprocess.DEVNULL,
-                    stdout=events_file,
-                    stderr=subprocess.DEVNULL,
-                    text=True,
-                    timeout=timeout_seconds,
-                    check=False,
+            timed_out = False
+            result: subprocess.CompletedProcess[str] | None = None
+            try:
+                with events_path.open("w", encoding="utf-8") as events_file:
+                    result = run(
+                        command,
+                        cwd=work_dir,
+                        stdin=subprocess.DEVNULL,
+                        stdout=events_file,
+                        stderr=subprocess.DEVNULL,
+                        text=True,
+                        timeout=timeout_seconds,
+                        check=False,
+                    )
+            except subprocess.TimeoutExpired:
+                timed_out = True
+            thread_id = thread_id_from_jsonl(events_path)
+            if timed_out:
+                if thread_id is not None:
+                    try:
+                        items = read_thread_items(codex_path, thread_id)
+                        cleanup_generated_image_files(items, thread_id)
+                    except (OSError, RuntimeError, TimeoutError, subprocess.SubprocessError):
+                        pass
+                return ImageGenerationProbeResult(
+                    verified=False,
+                    reason="Codex ImageGen 探测超时。",
+                    image=None,
+                )
+            if result is None:
+                return ImageGenerationProbeResult(
+                    verified=False,
+                    reason="Codex ImageGen 探测未返回命令结果。",
+                    image=None,
                 )
             if result.returncode != 0:
+                if thread_id is not None:
+                    try:
+                        items = read_thread_items(codex_path, thread_id)
+                        cleanup_generated_image_files(items, thread_id)
+                    except (OSError, RuntimeError, TimeoutError, subprocess.SubprocessError):
+                        pass
                 return ImageGenerationProbeResult(
                     verified=False,
                     reason=f"Codex ImageGen 探测命令失败（退出码 {result.returncode}）。",
                     image=None,
                 )
-            if not _contains_image_generation_call(events_path):
+            if thread_id is None:
                 return ImageGenerationProbeResult(
                     verified=False,
-                    reason="运行记录中没有成功的原生 ImageGen 工具调用。",
+                    reason="Codex 运行记录中没有可回读的持久化 session。",
                     image=None,
                 )
-            if output_path.is_symlink() or not output_path.is_file():
+            try:
+                items = read_thread_items(codex_path, thread_id)
+            except (OSError, RuntimeError, TimeoutError, subprocess.SubprocessError):
                 return ImageGenerationProbeResult(
                     verified=False,
-                    reason="原生 ImageGen 未在探测目录生成指定 PNG。",
+                    reason="Codex App Server 未能回读本次运行的原生 ImageGen 记录。",
                     image=None,
                 )
-            if output_path.resolve().parent != work_dir or output_path.stat().st_size > 25 * 1024 * 1024:
+            try:
+                generated = validate_native_image_generation_output(items, thread_id, output_path, work_dir)
+                return ImageGenerationProbeResult(
+                    verified=True,
+                    reason="Codex App Server 已确认原生 ImageGen，且同一结果通过 PNG 完整解码。",
+                    image=generated.image,
+                )
+            except ImageResultError as error:
+                reason = (
+                    "运行记录中没有成功的原生 ImageGen 工具调用。"
+                    if "did not record a completed native ImageGen" in str(error)
+                    else "原生 ImageGen 记录与受限 PNG 未能匹配验证。"
+                )
                 return ImageGenerationProbeResult(
                     verified=False,
-                    reason="探测 PNG 路径或大小不符合限制。",
+                    reason=reason,
                     image=None,
                 )
-            image = inspect_image(output_path.read_bytes(), "image/png", 25 * 1024 * 1024, 40_000_000)
-            return ImageGenerationProbeResult(
-                verified=True,
-                reason="原生 ImageGen 工具已生成并解码出有效 PNG。",
-                image=image,
-            )
-    except subprocess.TimeoutExpired:
-        return ImageGenerationProbeResult(
-            verified=False,
-            reason="Codex ImageGen 探测超时。",
-            image=None,
-        )
-    except (OSError, AssetValidationError, ValueError):
+            except (AssetValidationError, OSError, ValueError, RuntimeError):
+                return ImageGenerationProbeResult(
+                    verified=False,
+                    reason="原生 ImageGen 记录与受限 PNG 未能匹配验证。",
+                    image=None,
+                )
+            finally:
+                cleanup_generated_image_files(items, thread_id)
+    except (ImageResultError, OSError, AssetValidationError, ValueError, RuntimeError, TimeoutError):
         return ImageGenerationProbeResult(
             verified=False,
             reason="Codex ImageGen 探测未产出可解码的受限 PNG。",

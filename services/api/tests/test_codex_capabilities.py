@@ -5,6 +5,7 @@ from types import SimpleNamespace
 
 from PIL import Image
 
+from app.codex.app_server import ImageGenerationHistoryItem
 from app.codex.capabilities import (
     CapabilityReport,
     ImageGenerationProbeResult,
@@ -30,9 +31,9 @@ def test_settings_read_configured_imagegen_executable(monkeypatch) -> None:
     assert settings.codex_imagegen_executable_path == Path("/opt/codex-imagegen/codex")
 
 
-def png_bytes() -> bytes:
+def png_bytes(color: tuple[int, int, int] = (100, 180, 120)) -> bytes:
     buffer = BytesIO()
-    Image.new("RGB", (4, 3), (100, 180, 120)).save(buffer, format="PNG")
+    Image.new("RGB", (4, 3), color).save(buffer, format="PNG")
     return buffer.getvalue()
 
 
@@ -167,32 +168,49 @@ def test_needs_auth_is_reported_without_querying_app_server() -> None:
     assert app_server_called is False
 
 
-def test_explicit_imagegen_probe_requires_native_image_event_and_decodable_png(tmp_path) -> None:
+def test_explicit_imagegen_probe_requires_native_image_event_and_decodable_png(tmp_path, monkeypatch) -> None:
+    thread_id = "018f2f70-6af7-7a4b-b1d1-0d21db2db91b"
+    codex_home = tmp_path / "codex-home"
+    generated_dir = codex_home / "generated_images" / thread_id
+    generated_dir.mkdir(parents=True)
+    generated_path = generated_dir / "imagegen.png"
+    generated_path.write_bytes(png_bytes())
+
     def command_runner(args: list[str], **kwargs: object) -> SimpleNamespace:
+        assert "--ephemeral" not in args
         work_dir = Path(args[args.index("-C") + 1])
         (work_dir / "probe.png").write_bytes(png_bytes())
         stdout = kwargs["stdout"]
         assert hasattr(stdout, "write")
         stdout.write(json.dumps({
-            "type": "item.completed",
-            "item": {"type": "imageGeneration", "status": "completed"},
+            "type": "thread.started",
+            "thread_id": thread_id,
         }) + "\n")
         return SimpleNamespace(returncode=0)
 
+    def read_thread(codex_path: str, captured_thread_id: str) -> list[ImageGenerationHistoryItem]:
+        assert codex_path == "/opt/codex"
+        assert captured_thread_id == thread_id
+        return [ImageGenerationHistoryItem(status="completed", saved_path=str(generated_path))]
+
+    monkeypatch.setenv("CODEX_HOME", str(codex_home))
     result = run_image_generation_probe(
         "/opt/codex",
         temp_root=tmp_path,
         command_runner=command_runner,
+        thread_image_generation_reader=read_thread,
     )
-
     assert result.verified is True
     assert result.image is not None
     assert result.image.mime == "image/png"
     assert result.image.width == 4
     assert result.image.height == 3
+    assert not generated_path.exists()
 
 
 def test_image_file_without_native_generation_event_is_rejected(tmp_path) -> None:
+    thread_id = "018f2f70-6af7-7a4b-b1d1-0d21db2db91c"
+
     def command_runner(args: list[str], **kwargs: object) -> SimpleNamespace:
         work_dir = Path(args[args.index("-C") + 1])
         (work_dir / "probe.png").write_bytes(png_bytes())
@@ -200,17 +218,51 @@ def test_image_file_without_native_generation_event_is_rejected(tmp_path) -> Non
             "type": "item.completed",
             "item": {"type": "agent_message", "text": "PNG generated."},
         }) + "\n")
+        kwargs["stdout"].write(json.dumps({
+            "type": "thread.started",
+            "thread_id": thread_id,
+        }) + "\n")
         return SimpleNamespace(returncode=0)
 
     result = run_image_generation_probe(
         "/opt/codex",
         temp_root=tmp_path,
         command_runner=command_runner,
+        thread_image_generation_reader=lambda _path, _thread: [],
     )
 
     assert result.verified is False
     assert result.image is None
     assert "没有成功的原生 ImageGen" in result.reason
+
+
+def test_imagegen_probe_rejects_output_that_does_not_match_native_saved_png(tmp_path, monkeypatch) -> None:
+    thread_id = "018f2f70-6af7-7a4b-b1d1-0d21db2db91d"
+    codex_home = tmp_path / "codex-home"
+    generated_dir = codex_home / "generated_images" / thread_id
+    generated_dir.mkdir(parents=True)
+    generated_path = generated_dir / "imagegen.png"
+    generated_path.write_bytes(png_bytes((240, 20, 20)))
+    monkeypatch.setenv("CODEX_HOME", str(codex_home))
+
+    def command_runner(args: list[str], **kwargs: object) -> SimpleNamespace:
+        work_dir = Path(args[args.index("-C") + 1])
+        (work_dir / "probe.png").write_bytes(png_bytes())
+        kwargs["stdout"].write(json.dumps({"type": "thread.started", "thread_id": thread_id}) + "\n")
+        return SimpleNamespace(returncode=0)
+
+    result = run_image_generation_probe(
+        "/opt/codex",
+        temp_root=tmp_path,
+        command_runner=command_runner,
+        thread_image_generation_reader=lambda _path, _thread: [
+            ImageGenerationHistoryItem(status="completed", saved_path=str(generated_path))
+        ],
+    )
+
+    assert result.verified is False
+    assert "匹配验证" in result.reason
+    assert not generated_path.exists()
 
 
 def test_capability_endpoint_is_admin_only_and_does_not_trigger_image_generation(
