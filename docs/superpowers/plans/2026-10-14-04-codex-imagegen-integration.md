@@ -113,5 +113,5 @@
 - [x] **Step 2: Verify RED** — new tests failed on the missing configured-path parameter and app setting.
 - [x] **Step 3: Implement minimally** — add the operator-only `IP_STUDIO_CODEX_IMAGEGEN_EXECUTABLE` setting; resolve and validate the absolute executable path; pass it through capability and run verification. Invalid configuration reports unavailable and never falls back to another CLI. Browser/API request payloads cannot supply executable paths.
 - [x] **Step 4: Verify GREEN** — capability/Codex-run/Patch-proposal tests passed (20); full `bash scripts/verify-v1.sh` passed (FastAPI 98, Vitest 73, Playwright Chromium 16, production build). API-owned SQLite probe of Cursor CLI `0.154.0-alpha.6.2` returned exit code `1`, so it did not pass the native event + PNG gate and no runtime was cached.
-- [ ] **Step 5: Commit and remote verification** — commit the runtime-selection implementation and evidence; require PR CI to pass. AC-25 remains blocked until a compatible runtime passes API-owned native ImageGen and candidate return/approval.
+- [x] **Step 5: Commit and remote verification** — commit `9956545 feat(codex): configure local ImageGen executable`; push/PR API and Web CI plus GitGuardian passed. AC-25 remains blocked until a compatible runtime passes API-owned native ImageGen and candidate return/approval.
 

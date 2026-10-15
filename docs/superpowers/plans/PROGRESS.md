@@ -261,4 +261,5 @@
 - 实现：API 支持部署变量 `IP_STUDIO_CODEX_IMAGEGEN_EXECUTABLE`（本机路径示例应填实际 `codex` binary），并将选择应用到只读能力检查、管理员真实 probe 和 run 前复核。无效或相对路径返回 `unavailable`；网页请求不能传入任意 binary 路径。实际通过的 path/version 仍绑定 E2E 缓存。
 - 真实验收：配置该变量指向 Cursor 扩展内 `/Users/inupedia/.cursor/extensions/openai.chatgpt-26.908.40401-darwin-arm64/bin/macos-aarch64/codex`（`0.154.0-alpha.6.2`），管理员调用 `POST /api/v1/codex/capabilities/probe` 返回 HTTP 200、ImageGen advertised、命令 exit code `1`、`e2e_verified=false`。未缓存 runtime，也未产生 run/candidate。证据见 [configured runtime probe](../../qa/evidence/codex-configured-runtime-probe-2026-10-15.json)。
 - 完整验证：`bash scripts/verify-v1.sh` 通过：FastAPI 98 passed、Vitest 73 passed、Playwright Chromium 16 passed、production build 成功。
+- 交付：`9956545 feat(codex): configure local ImageGen executable` 已推送到 Draft PR #1；push/PR API 与 Web jobs、GitGuardian 均通过（[push CI](https://github.com/Inupedia/IP-STUDIO/actions/runs/38666402140)、[PR CI](https://github.com/Inupedia/IP-STUDIO/actions/runs/38666407017)）。
 - 状态：路径配置实现已具备；Homebrew、桌面捆绑和 Cursor 捆绑 runtime 均未通过 E2E gate。AC-25 保持 `BLOCKED`，仍需实际兼容的可执行文件/host 通过管理员 PNG 探测并完成候选审核回流；不以 environment override 本身清除产品门槛。
