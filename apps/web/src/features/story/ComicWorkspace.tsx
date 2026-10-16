@@ -101,7 +101,7 @@ function elementAssetIds(document: CanvasDocumentV1 | null, brand: BrandTemplate
   return [...new Set([...documentIds, ...brandIds])].sort();
 }
 
-export function ComicWorkspace({ ip }: { ip: IP }) {
+export function ComicWorkspace({ ip, onDirtyChange }: { ip: IP; onDirtyChange?: (dirty: boolean) => void }) {
   const history = useRef<{ past: CanvasDocumentV1[]; future: CanvasDocumentV1[] }>({ past: [], future: [] });
   const documentEditVersion = useRef(0);
   const [series, setSeries] = useState<SeriesReadV1[]>([]);
@@ -110,10 +110,13 @@ export function ComicWorkspace({ ip }: { ip: IP }) {
   const [availableAssets, setAvailableAssets] = useState<AssetVersion[]>([]);
   const [selectedSeriesId, setSelectedSeriesId] = useState('');
   const [selectedEpisodeId, setSelectedEpisodeId] = useState('');
+  const selectedSeriesIdRef = useRef('');
+  const selectedEpisodeIdRef = useRef('');
   const [document, setDocument] = useState<CanvasDocumentV1 | null>(null);
   const [scriptRevision, setScriptRevision] = useState<ScriptRevisionReadV1 | null>(null);
   const [storyboardPanels, setStoryboardPanels] = useState<StoryboardPanelV1[]>([]);
   const [selectedGenerationPanelId, setSelectedGenerationPanelId] = useState('');
+  const selectedGenerationPanelIdRef = useRef('');
   const [generationTask, setGenerationTask] = useState<GenerationTaskV1 | null>(null);
   const [candidateRefreshKey, setCandidateRefreshKey] = useState(0);
   const [brandVersion, setBrandVersion] = useState<BrandTemplateVersionReadV1 | null>(null);
@@ -124,8 +127,12 @@ export function ComicWorkspace({ ip }: { ip: IP }) {
   const [error, setError] = useState('');
   const [seriesName, setSeriesName] = useState('');
   const [episodeTitle, setEpisodeTitle] = useState('');
+  const [scriptDraftDirty, setScriptDraftDirty] = useState(false);
   const [creatingBrand, setCreatingBrand] = useState(false);
   const [savingScript, setSavingScript] = useState(false);
+  const [patchApprovalBusy, setPatchApprovalBusy] = useState(false);
+  const [storyboardSyncBusy, setStoryboardSyncBusy] = useState(false);
+  const [workspaceMutationBusy, setWorkspaceMutationBusy] = useState(false);
 
   const approvedVersions = useMemo(
     () => flattenVersions(templates).filter((version) => version.status === 'approved'),
@@ -135,6 +142,39 @@ export function ComicWorkspace({ ip }: { ip: IP }) {
   const blankScript = useMemo(() => makeBlankScript(selectedEpisode?.title ?? ''), [selectedEpisode?.id, selectedEpisode?.title]);
   const assetVersionIds = useMemo(() => elementAssetIds(document, brandVersion?.template ?? null), [document, brandVersion]);
   const assetVersionKey = assetVersionIds.join('|');
+  const workspaceDirty = saveStatus !== 'saved' || scriptDraftDirty || Boolean(seriesName.trim() || episodeTitle.trim());
+
+  useEffect(() => {
+    onDirtyChange?.(workspaceDirty);
+  }, [onDirtyChange, workspaceDirty]);
+
+  function confirmDiscardScriptDraft() {
+    return !scriptDraftDirty || window.confirm('剧本有未保存内容，切换后会丢弃这些更改，仍要继续吗？');
+  }
+
+  function changeGenerationPanel(nextPanelId: string) {
+    selectedGenerationPanelIdRef.current = nextPanelId;
+    setSelectedGenerationPanelId(nextPanelId);
+  }
+
+  function changeSelectedSeries(nextSeriesId: string) {
+    if (savingScript) return;
+    if (nextSeriesId === selectedSeriesId || !confirmDiscardScriptDraft()) return;
+    selectedSeriesIdRef.current = nextSeriesId;
+    selectedEpisodeIdRef.current = '';
+    changeGenerationPanel('');
+    setScriptDraftDirty(false);
+    setSelectedSeriesId(nextSeriesId);
+  }
+
+  function changeSelectedEpisode(nextEpisodeId: string) {
+    if (savingScript) return;
+    if (nextEpisodeId === selectedEpisodeId || !confirmDiscardScriptDraft()) return;
+    selectedEpisodeIdRef.current = nextEpisodeId;
+    changeGenerationPanel('');
+    setScriptDraftDirty(false);
+    setSelectedEpisodeId(nextEpisodeId);
+  }
 
   useEffect(() => {
     let active = true;
@@ -146,10 +186,12 @@ export function ComicWorkspace({ ip }: { ip: IP }) {
     setAvailableAssets([]);
     setSelectedSeriesId('');
     setSelectedEpisodeId('');
+    selectedSeriesIdRef.current = '';
+    selectedEpisodeIdRef.current = '';
     setDocument(null);
     setScriptRevision(null);
     setStoryboardPanels([]);
-    setSelectedGenerationPanelId('');
+    changeGenerationPanel('');
     setGenerationTask(null);
     setBrandVersion(null);
     history.current = { past: [], future: [] };
@@ -159,7 +201,9 @@ export function ComicWorkspace({ ip }: { ip: IP }) {
         setSeries(nextSeries);
         setTemplates(nextTemplates);
         setAvailableAssets(nextAssets);
-        setSelectedSeriesId(nextSeries[0]?.id ?? '');
+        const nextSeriesId = nextSeries[0]?.id ?? '';
+        selectedSeriesIdRef.current = nextSeriesId;
+        setSelectedSeriesId(nextSeriesId);
       })
       .catch((cause: unknown) => {
         if (active) setError(cause instanceof Error ? cause.message : '无法读取漫画工作区');
@@ -172,10 +216,11 @@ export function ComicWorkspace({ ip }: { ip: IP }) {
     let active = true;
     setEpisodes([]);
     setSelectedEpisodeId('');
+    selectedEpisodeIdRef.current = '';
     setDocument(null);
     setScriptRevision(null);
     setStoryboardPanels([]);
-    setSelectedGenerationPanelId('');
+    changeGenerationPanel('');
     setGenerationTask(null);
     setBrandVersion(null);
     if (!selectedSeriesId) return () => { active = false; };
@@ -183,7 +228,9 @@ export function ComicWorkspace({ ip }: { ip: IP }) {
       .then((nextEpisodes) => {
         if (!active) return;
         setEpisodes(nextEpisodes);
-        setSelectedEpisodeId(nextEpisodes[0]?.id ?? '');
+        const nextEpisodeId = nextEpisodes[0]?.id ?? '';
+        selectedEpisodeIdRef.current = nextEpisodeId;
+        setSelectedEpisodeId(nextEpisodeId);
       })
       .catch((cause: unknown) => { if (active) setError(cause instanceof Error ? cause.message : '无法读取单集'); });
     return () => { active = false; };
@@ -196,7 +243,7 @@ export function ComicWorkspace({ ip }: { ip: IP }) {
     setSaveStatus('saved');
     setScriptRevision(null);
     setStoryboardPanels([]);
-    setSelectedGenerationPanelId('');
+    changeGenerationPanel('');
     setGenerationTask(null);
     history.current = { past: [], future: [] };
     if (!selectedEpisode) return () => { active = false; };
@@ -237,7 +284,7 @@ export function ComicWorkspace({ ip }: { ip: IP }) {
     }
     const byVersion = new Map(availableAssets.map((asset) => [asset.asset_version_id, asset]));
     Promise.all(assetVersionIds.map(async (versionId) => {
-      const asset = byVersion.get(versionId);
+      const asset = byVersion.get(versionId) ?? await api.getAssetVersion(ip.id, versionId);
       if (!asset) throw new Error(`找不到画布引用素材 ${versionId}`);
       const objectUrl = await api.getAssetPreview(ip.id, asset.asset_id, versionId);
       objectUrls.push(objectUrl);
@@ -253,29 +300,47 @@ export function ComicWorkspace({ ip }: { ip: IP }) {
 
   async function createSeries(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (workspaceMutationBusy || !confirmDiscardScriptDraft()) return;
+    setWorkspaceMutationBusy(true);
     try {
       const created = await api.createSeries(ip.id, seriesName);
       setSeries((current) => [...current, created]);
       setSeriesName('');
+      setScriptDraftDirty(false);
+      selectedSeriesIdRef.current = created.id;
+      selectedEpisodeIdRef.current = '';
       setSelectedSeriesId(created.id);
       setError('');
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : '无法创建系列');
+    } finally {
+      setWorkspaceMutationBusy(false);
     }
   }
 
   async function createEpisode(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!selectedSeriesId) return;
+    if (!selectedSeriesId || savingScript || workspaceMutationBusy) return;
+    if (!confirmDiscardScriptDraft()) return;
+    const targetSeriesId = selectedSeriesId;
+    const previousEpisodeId = selectedEpisodeIdRef.current;
+    const editVersionAtStart = documentEditVersion.current;
+    setWorkspaceMutationBusy(true);
     try {
       const number = Math.max(0, ...episodes.map((episode) => episode.number)) + 1;
-      const created = await api.createEpisode(selectedSeriesId, number, episodeTitle);
+      const created = await api.createEpisode(targetSeriesId, number, episodeTitle);
+      if (selectedSeriesIdRef.current !== targetSeriesId) return;
       setEpisodes((current) => [...current, created]);
       setEpisodeTitle('');
+      if (selectedEpisodeIdRef.current !== previousEpisodeId || documentEditVersion.current !== editVersionAtStart) return;
+      selectedEpisodeIdRef.current = created.id;
+      setScriptDraftDirty(false);
       setSelectedEpisodeId(created.id);
       setError('');
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : '无法创建单集');
+    } finally {
+      setWorkspaceMutationBusy(false);
     }
   }
 
@@ -329,21 +394,25 @@ export function ComicWorkspace({ ip }: { ip: IP }) {
 
   async function saveScript(payload: ScriptSavePayload) {
     if (!selectedEpisode) return;
+    const episodeId = selectedEpisode.id;
     setSavingScript(true);
     setError('');
     try {
       const saved = await api.saveEpisodeScript(
-        selectedEpisode.id,
+        episodeId,
         payload.base_revision,
         payload.script,
         payload.source_markdown,
       );
+      if (selectedEpisodeIdRef.current !== episodeId) return;
       setScriptRevision(saved);
       setStoryboardPanels([]);
-      setSelectedGenerationPanelId('');
+      changeGenerationPanel('');
       setGenerationTask(null);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : '无法保存剧本修订');
+      if (selectedEpisodeIdRef.current === episodeId) {
+        setError(cause instanceof Error ? cause.message : '无法保存剧本修订');
+      }
       throw cause;
     } finally {
       setSavingScript(false);
@@ -356,53 +425,75 @@ export function ComicWorkspace({ ip }: { ip: IP }) {
   ): Promise<ScriptMaterializationResultV1> {
     if (!selectedEpisode || !scriptRevision) throw new Error('请先保存剧本修订。');
     if (saveStatus !== 'saved') throw new Error('请先保存画布，再生成或同步分镜。');
-    const result = await api.materializeScriptPanels(
-      selectedEpisode.id,
-      scriptRevision.revision_no,
-      baseDocumentRevision,
-      confirmDialogueSync,
-    );
-    if (result.document_revision !== document?.revision) {
-      const latest = await api.getEpisodeDocument(selectedEpisode.id);
-      if (latest.document) {
-        setDocument(CanvasDocumentV1Schema.parse({ ...latest.document, revision: latest.revision }));
-        setSaveStatus('saved');
+    const episodeId = selectedEpisode.id;
+    const editVersionAtStart = documentEditVersion.current;
+    setStoryboardSyncBusy(true);
+    try {
+      const result = await api.materializeScriptPanels(
+        episodeId,
+        scriptRevision.revision_no,
+        baseDocumentRevision,
+        confirmDialogueSync,
+      );
+      if (selectedEpisodeId !== episodeId || documentEditVersion.current !== editVersionAtStart) {
+        throw new Error('单集或画布已变化，请重新加载后再生成或同步分镜。');
       }
+      if (result.document_revision !== document?.revision) {
+        const latest = await api.getEpisodeDocument(episodeId);
+        if (selectedEpisodeId !== episodeId || documentEditVersion.current !== editVersionAtStart) {
+          throw new Error('单集或画布已变化，请重新加载后再生成或同步分镜。');
+        }
+        if (latest.document) {
+          setDocument(CanvasDocumentV1Schema.parse({ ...latest.document, revision: latest.revision }));
+          history.current = { past: [], future: [] };
+          documentEditVersion.current += 1;
+          setSaveStatus('saved');
+        }
+      }
+      setStoryboardPanels(result.panels);
+      const nextPanelId = result.panels.some((panel) => panel.panel_id === selectedGenerationPanelIdRef.current)
+        ? selectedGenerationPanelIdRef.current
+        : result.panels[0]?.panel_id ?? '';
+      changeGenerationPanel(nextPanelId);
+      setGenerationTask(null);
+      return result;
+    } finally {
+      setStoryboardSyncBusy(false);
     }
-    setStoryboardPanels(result.panels);
-    setSelectedGenerationPanelId((current) =>
-      result.panels.some((panel) => panel.panel_id === current) ? current : result.panels[0]?.panel_id ?? '',
-    );
-    setGenerationTask(null);
-    return result;
   }
 
   async function createGenerationTask() {
-    if (!selectedEpisode || !scriptRevision || !selectedGenerationPanelId) return;
+    if (!selectedEpisode || !scriptRevision || !selectedGenerationPanelId || workspaceMutationBusy) return;
+    const targetEpisodeId = selectedEpisode.id;
+    const targetPanelId = selectedGenerationPanelId;
+    const targetRevisionNo = scriptRevision.revision_no;
+    setWorkspaceMutationBusy(true);
     setError('');
     try {
-      const task = await api.createGenerationTask(selectedEpisode.id, {
-        script_revision_no: scriptRevision.revision_no,
-        panel_id: selectedGenerationPanelId,
+      const task = await api.createGenerationTask(targetEpisodeId, {
+        script_revision_no: targetRevisionNo,
+        panel_id: targetPanelId,
         mode: 'chatgpt_web',
       });
+      if (
+        selectedEpisodeIdRef.current !== targetEpisodeId
+        || selectedGenerationPanelIdRef.current !== targetPanelId
+        || task.episode_id !== targetEpisodeId
+        || task.panel_id !== targetPanelId
+      ) return;
       setGenerationTask(task);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : '无法准备人工生图任务');
+    } finally {
+      setWorkspaceMutationBusy(false);
     }
   }
 
-  async function handleCodexPatchApplied() {
-    if (!selectedEpisode) return;
-    try {
-      const latest = await api.getEpisodeDocument(selectedEpisode.id);
-      if (!latest.document) return;
-      setDocument(CanvasDocumentV1Schema.parse({ ...latest.document, revision: latest.revision }));
-      setSaveStatus('saved');
-      history.current = { past: [], future: [] };
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : '已批准 Patch，但无法重新读取画布');
-    }
+  function handleCodexPatchApplied(nextDocument: CanvasDocumentV1) {
+    setDocument(CanvasDocumentV1Schema.parse(nextDocument));
+    setSaveStatus('saved');
+    history.current = { past: [], future: [] };
+    documentEditVersion.current += 1;
   }
 
   function dispatchCanvasCommand(command: CanvasCommand) {
@@ -444,7 +535,12 @@ export function ComicWorkspace({ ip }: { ip: IP }) {
   if (loading) return <section className="comic-workspace loading-workspace" role="status">正在读取系列、模板和素材…</section>;
 
   return (
-    <section className="comic-workspace" aria-label="漫画工作台">
+    <section
+      className="comic-workspace"
+      aria-label="漫画工作台"
+      inert={patchApprovalBusy || storyboardSyncBusy || workspaceMutationBusy}
+      aria-busy={patchApprovalBusy || storyboardSyncBusy || workspaceMutationBusy}
+    >
       <div className="production-section-heading comic-workspace-heading">
         <div><p className="eyebrow">STORY · EPISODES · CANVAS</p><h2>漫画工作台</h2></div>
         <span>{ip.name} · {series.length} 个系列</span>
@@ -453,14 +549,14 @@ export function ComicWorkspace({ ip }: { ip: IP }) {
       <div className="comic-workspace-selectors">
         <label>
           选择系列
-          <select aria-label="选择系列" value={selectedSeriesId} disabled={saveStatus !== 'saved'} onChange={(event) => setSelectedSeriesId(event.currentTarget.value)}>
+          <select aria-label="选择系列" value={selectedSeriesId} disabled={saveStatus !== 'saved' || savingScript || workspaceMutationBusy} onChange={(event) => changeSelectedSeries(event.currentTarget.value)}>
             <option value="">请选择系列</option>
             {series.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
           </select>
         </label>
         <label>
           选择单集
-          <select aria-label="选择单集" value={selectedEpisodeId} disabled={!selectedSeriesId || saveStatus !== 'saved'} onChange={(event) => setSelectedEpisodeId(event.currentTarget.value)}>
+          <select aria-label="选择单集" value={selectedEpisodeId} disabled={!selectedSeriesId || saveStatus !== 'saved' || savingScript || workspaceMutationBusy} onChange={(event) => changeSelectedEpisode(event.currentTarget.value)}>
             <option value="">请选择单集</option>
             {episodes.map((item) => <option key={item.id} value={item.id}>EP.{String(item.number).padStart(2, '0')} · {item.title}</option>)}
           </select>
@@ -468,7 +564,7 @@ export function ComicWorkspace({ ip }: { ip: IP }) {
         {selectedSeriesId && (
           <form className="comic-create-inline" onSubmit={createEpisode}>
             <label>新单集标题<input required maxLength={200} value={episodeTitle} onChange={(event) => setEpisodeTitle(event.currentTarget.value)} placeholder="下一集标题" /></label>
-            <button className="button button-secondary" type="submit" disabled={saveStatus !== 'saved'}>创建单集</button>
+            <button className="button button-secondary" type="submit" disabled={saveStatus !== 'saved' || savingScript || workspaceMutationBusy}>创建单集</button>
           </form>
         )}
       </div>
@@ -506,6 +602,7 @@ export function ComicWorkspace({ ip }: { ip: IP }) {
                 script={scriptRevision?.script ?? blankScript}
                 onSave={saveScript}
                 saving={savingScript}
+                onDirtyChange={setScriptDraftDirty}
               />
               <Storyboard
                 panels={storyboardPanels}
@@ -522,9 +619,9 @@ export function ComicWorkspace({ ip }: { ip: IP }) {
                   <select
                     aria-label="生图目标分镜卡"
                     value={selectedGenerationPanelId}
-                    disabled={storyboardPanels.length === 0}
+                    disabled={storyboardPanels.length === 0 || workspaceMutationBusy}
                     onChange={(event) => {
-                      setSelectedGenerationPanelId(event.currentTarget.value);
+                      changeGenerationPanel(event.currentTarget.value);
                       setGenerationTask(null);
                     }}
                   >
@@ -539,7 +636,7 @@ export function ComicWorkspace({ ip }: { ip: IP }) {
                 <button
                   className="button button-primary"
                   type="button"
-                  disabled={!scriptRevision || !selectedGenerationPanelId || saveStatus !== 'saved'}
+                  disabled={!scriptRevision || !selectedGenerationPanelId || saveStatus !== 'saved' || workspaceMutationBusy}
                   onClick={() => void createGenerationTask()}
                 >
                   准备 ChatGPT Web 生图任务
@@ -588,7 +685,9 @@ export function ComicWorkspace({ ip }: { ip: IP }) {
                 episodeId={selectedEpisode.id}
                 currentRevision={document.revision}
                 currentDocument={document}
-                onApplied={() => { void handleCodexPatchApplied(); }}
+                isCanvasDirty={saveStatus !== 'saved'}
+                onApplyBusyChange={setPatchApprovalBusy}
+                onApplied={handleCodexPatchApplied}
                 onManualEdit={() => window.document.querySelector('.comic-editor')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
               />
               </Suspense>

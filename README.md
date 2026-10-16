@@ -2,7 +2,7 @@
 
 面向原创漫画 IP 的**数字资产管理、可编辑创作与模板化出版工作台**。
 
-> 状态：V1 计划内功能代码与本地自动化回归已完成，真实 PostgreSQL + Blob 恢复演练已通过。发布门槛仍未全部满足：AC-25 原生 ImageGen 探测/候选回流受阻，远端 GitHub Actions、发布版本验证日志和生产配置检查也待完成；逐项状态见 [V1 发布检查表](docs/qa/V1-release-checklist.md)。
+> 状态：AC-01～AC-26 验收已全部通过并已合并到 `main`（merge commit `be9982c`）。合并后的源码快照在独立解包目录完成完整 verifier（FastAPI 104、Vitest 73、Playwright 16、production build），证据见[快照清单](docs/qa/evidence/v1-post-merge-snapshot-2026-10-15.json)和[日志](docs/qa/evidence/verify-v1-v1.0.0-gbe9982c.log)。独立只读静态代码审查未发现可操作缺陷。正式版本 tag/发布制品及实际生产环境配置仍待完成；当前主机与域名尚未选定。逐项状态见 [V1 发布检查表](docs/qa/V1-release-checklist.md)。
 
 ## V1 定位
 

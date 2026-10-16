@@ -6,6 +6,7 @@ export interface PatchPreviewProps {
   currentDocument: CanvasDocumentV1 | null;
   currentRevision: number;
   busy?: boolean;
+  canApprove?: boolean;
   onApprove?: () => void;
   onReject?: () => void;
 }
@@ -51,6 +52,7 @@ export function PatchPreview({
   currentDocument,
   currentRevision,
   busy = false,
+  canApprove = true,
   onApprove,
   onReject,
 }: PatchPreviewProps) {
@@ -67,6 +69,9 @@ export function PatchPreview({
       {stale && proposal.status === 'pending_approval' && (
         <p className="form-error" role="alert">当前画布已更新到 revision {currentRevision}；此建议已过期，请从最新版本重新生成。</p>
       )}
+      {!canApprove && !stale && proposal.status === 'pending_approval' && (
+        <p className="generation-task-note" role="status">请先保存画布，再批准这条 Patch 建议。</p>
+      )}
       <ol className="patch-preview-operations">
         {proposal.patch.operations.map((operation, index) => (
           <li key={`${operation.op}:${index}`}>{describeOperation(operation, currentDocument)}</li>
@@ -82,7 +87,7 @@ export function PatchPreview({
           <button
             className="button button-primary"
             type="button"
-            disabled={busy || stale}
+            disabled={busy || stale || !canApprove}
             onClick={onApprove}
           >
             批准并写入 revision {proposal.base_revision + 1}

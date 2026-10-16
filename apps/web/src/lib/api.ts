@@ -210,6 +210,11 @@ export const api = {
     return request(`/api/v1/assets?ip_id=${encodeURIComponent(ipId)}`);
   },
 
+  getAssetVersion(ipId: string, versionId: string): Promise<AssetVersion> {
+    const query = new URLSearchParams({ ip_id: ipId });
+    return request(`/api/v1/assets/versions/${versionId}?${query}`);
+  },
+
   uploadAsset(
     file: File,
     ipId: string,

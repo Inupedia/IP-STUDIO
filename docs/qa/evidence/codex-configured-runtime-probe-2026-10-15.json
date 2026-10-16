@@ -1,0 +1,18 @@
+{
+  "checked_at": "2026-10-15T01:31:48.467840Z",
+  "runtime_name": "Cursor ChatGPT extension bundled Codex CLI",
+  "codex_path": "/Users/inupedia/.cursor/extensions/openai.chatgpt-26.908.40401-darwin-arm64/bin/macos-aarch64/codex",
+  "codex_version": "codex-cli 0.154.0-alpha.6.2",
+  "login_status": "Logged in using ChatGPT",
+  "http_status": 200,
+  "status": "unavailable",
+  "reason": "Codex ImageGen 探测命令失败（退出码 1）。",
+  "app_server_available": true,
+  "image_generation_advertised": true,
+  "e2e_verified": false,
+  "verified_path_cached": false,
+  "verified_version_cached": false,
+  "run_or_candidate_created": false,
+  "probe_database": "temporary SQLite",
+  "probe_timeout_seconds": 90
+}

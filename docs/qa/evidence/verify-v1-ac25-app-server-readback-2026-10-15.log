@@ -1,0 +1,91 @@
+
+== Backend pytest ==
+........................................................................ [ 69%]
+................................                                         [100%]
+104 passed in 7.35s
+
+== Frontend Vitest ==
+
+> @ip-studio/web@ test /Users/inupedia/Side Projects/IP-STUDIO/apps/web
+> vitest run
+
+
+ RUN  v5.0.4 /Users/inupedia/Side Projects/IP-STUDIO/apps/web
+
+
+ Test Files  26 passed (26)
+      Tests  73 passed (73)
+   Start at  12:10:39
+   Duration  2.19s (environment 63%, tests 19%, import 14%, transform 3%, worker 1%)
+
+Environment  jsdom was created 26 times · 10.74s total, 63% of tracked time
+             create it once per worker with pool: 'vmThreads' (keeps per-file isolation) or isolate: false (shares it across files)
+             learn more: https://vitest.dev/guide/improving-performance#test-environments
+
+
+== Playwright Chromium E2E ==
+
+> @ip-studio/web@ test:e2e /Users/inupedia/Side Projects/IP-STUDIO/apps/web
+> playwright test --config playwright.config.ts
+
+[WebServer] (node:40089) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `pnpm --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:40107) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 16 tests using 5 workers
+
+(node:40117) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:40116) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:40114) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:40113) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:40115) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   2 [chromium] › ../../tests/e2e/ip-studio.spec.ts:390:5 › reopens frozen canvas image versions when the asset library has newer versions (2.0s)
+  ✓   3 [chromium] › ../../tests/e2e/ip-studio.spec.ts:456:5 › locks the current canvas while a new episode is being created (2.1s)
+  ✓   4 [chromium] › ../../tests/e2e/ip-studio.spec.ts:439:5 › prevents episode switching while a script revision is being saved (2.1s)
+  ✓   5 [chromium] › ../../tests/e2e/ip-studio.spec.ts:421:5 › confirms before switching episodes with an unsaved script draft (2.1s)
+  ✓   1 [chromium] › ../../tests/e2e/ip-studio.spec.ts:399:5 › warns before leaving the comic workspace with unsaved edits (2.4s)
+  ✓   9 [chromium] › ../../tests/e2e/ip-studio.spec.ts:626:5 › an empty IP can create a series, approved starter brand, episode, and first saved canvas (1.5s)
+  ✓   7 [chromium] › ../../tests/e2e/ip-studio.spec.ts:502:5 › clears canvas undo history after confirmed script dialogue sync (1.9s)
+  ✓   6 [chromium] › ../../tests/e2e/ip-studio.spec.ts:477:5 › locks the selected episode and panel while a generation task is being created (2.2s)
+  ✓  10 [chromium] › ../../tests/e2e/ip-studio.spec.ts:644:5 › two editors use revision CAS and the stale tab cannot overwrite the winner (2.5s)
+  ✓  11 [chromium] › ../../tests/e2e/ip-studio.spec.ts:666:5 › editing during a pending save stays dirty and can be saved at the returned revision (1.3s)
+  ✓  12 [chromium] › ../../tests/e2e/ip-studio.spec.ts:691:5 › long Chinese copy shows a visible overflow warning before saving (1.5s)
+  ✓   8 [chromium] › ../../tests/e2e/ip-studio.spec.ts:545:5 › EP01 dialogue direction, scoped edits, EP02 shared brand, and editable PPTX export (3.5s)
+  ✓  14 [chromium] › ../../tests/e2e/ip-studio.spec.ts:731:5 › ten-page PNG export preserves page count and ordered image files (1.5s)
+  ✓  15 [chromium] › ../../tests/e2e/ip-studio.spec.ts:749:5 › thirty canvas elements remain selectable and editable without AI services (1.4s)
+  ✓  13 [chromium] › ../../tests/e2e/ip-studio.spec.ts:700:5 › production workflow keeps ChatGPT Web generation and candidate approval available (2.2s)
+  ✓  16 [chromium] › ../../tests/e2e/ip-studio.spec.ts:772:5 › dragging one selected canvas element moves its selected siblings by the same distance (1.5s)
+
+  16 passed (11.6s)
+
+== Frontend production build ==
+
+> @ip-studio/web@ build /Users/inupedia/Side Projects/IP-STUDIO/apps/web
+> tsc --noEmit && vite build
+
+vite v8.3.4 building client environment for production...
+transforming...
+✓ 217 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                    0.53 kB │ gzip:   0.32 kB
+dist/assets/index-CE3P1Fn4.css                    33.06 kB │ gzip:   7.33 kB
+dist/assets/__vite-browser-external-CKnVkMRn.js    0.10 kB │ gzip:   0.11 kB
+dist/assets/rolldown-runtime-Dd_uD5pT.js           1.10 kB │ gzip:   0.62 kB
+dist/assets/Storyboard-BRjf05Ji.js                 3.52 kB │ gzip:   1.53 kB
+dist/assets/ImportAssetDropzone-DluLvdl1.js        4.08 kB │ gzip:   2.13 kB
+dist/assets/CandidateReview-xqgodWA-.js            4.09 kB │ gzip:   1.71 kB
+dist/assets/CodexAssistant-DhOx2i08.js             6.17 kB │ gzip:   2.65 kB
+dist/assets/GenerationTaskCard-CUAFn409.js         6.64 kB │ gzip:   2.47 kB
+dist/assets/ScriptEditor-BOTCl_5q.js               6.82 kB │ gzip:   2.37 kB
+dist/assets/index-DTnyBOC-.js                    260.39 kB │ gzip:  79.64 kB
+dist/assets/pptxgen.es-AfevNVWD.js               368.45 kB │ gzip: 123.26 kB
+dist/assets/ComicWorkspace-DshUL6UB.js           491.21 kB │ gzip: 146.59 kB
+
+✓ built in 142ms

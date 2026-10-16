@@ -29,8 +29,8 @@ jobs:
         image: postgres:17-alpine
         env:
           POSTGRES_USER: ip_studio
-          POSTGRES_PASSWORD: ip_studio_ci_only
           POSTGRES_DB: ip_studio
+          POSTGRES_HOST_AUTH_METHOD: trust
         ports:
           - 5432:5432
         options: >-
@@ -39,7 +39,7 @@ jobs:
           --health-timeout 3s
           --health-retries 10
     env:
-      DATABASE_URL: postgresql+psycopg://ip_studio:ip_studio_ci_only@localhost:5432/ip_studio
+      DATABASE_URL: postgresql+psycopg://ip_studio@localhost:5432/ip_studio
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6

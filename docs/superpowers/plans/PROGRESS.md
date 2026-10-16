@@ -237,6 +237,45 @@
 - 提交：本条记录随 release/handoff commit 一同落地。
 - 结果：新增本地安装/启动指南、PostgreSQL + Blob 备份恢复 Runbook、`bash scripts/verify-v1.sh` 统一入口，以及 Playwright Chromium 和 PostgreSQL 17 migration CI。README 从“尚未实现”更新为当前代码状态和未完成的发布门槛。
 - GREEN 与回归：验证入口完整运行通过（FastAPI 94、Vitest 66、Playwright 8、production build）；故障注入确认首个后端命令 exit code `37` 原样返回。CI YAML/Compose 配置解析通过；PG 17.11 upgrade/check/downgrade/upgrade/check 与真实数据库/Blob 恢复后登录、图片 byte match、工程 ZIP 再导出通过。
-- 真实能力边界：API 管理员 probe 调用当前 Codex CLI 后没有成功 ImageGen 事件/PNG；重试退出码为 `1`，API 未开放 native run，因此 AC-25 继续 `BLOCKED`。GitHub Actions 远端尚未运行；相关命令已由同一工作树的本地 verifier 和 PG runtime 复演。
+- 远端安全扫描 RED/GREEN：Draft PR #1 首次 GitGuardian 检出新增的固定 CI/测试凭据；改为每次测试进程随机生成验收 JWT/password，并将隔离 GitHub runner 的 Postgres 服务切换为 `trust` 且移除 DSN 密码。修复后的完整本地 verifier（94/66/8/build）与 workflow YAML 解析通过；当前 head `3135003` 的 push/PR API 与 Web jobs、GitGuardian Security Checks 均通过。
+- 真实能力边界：API 管理员 probe 调用当前 Codex CLI 后没有成功 ImageGen 事件/PNG；重试退出码为 `1`，API 未开放 native run，因此 AC-25 继续 `BLOCKED`。本地完整 verifier 与 PostgreSQL runtime 已复演；当前提交的 GitHub Actions/GitGuardian 结果见上条。
 - 外部兼容性证据：OpenAI 当前 [Sign in with ChatGPT preview limitations](https://developers.openai.com/siwc/token-sharing-open-source/preview-limitations) 将 ChatGPT-plan Codex App Server Responses 路径的 Image Generation 列为不支持。这与 AC-25 失败相符，但没有从 IP Studio 读取认证/transport 状态，因此根因仍标为推断；不通过私有接口、Cookie 或开发者 API 绕过门禁。
 - 状态：交接材料与 CI 配置已落地；Stage05 Task5 / 最终 release gate 仍未完成。除 AC-25 原生探测与待审核候选回流外，远端 GitHub Actions、发布版本验证日志和生产配置检查也待完成。
+
+### PR #1 合并前复审加固（2026-10-14）
+
+- 修复历史 AssetVersion 预览、画布有未保存修改时审批 Codex Patch、批量变换单元素误发组命令、剧本草稿切换丢失、对白同步撤销旧画布历史、脚本保存响应串集等复审问题。
+- 将 Konva 内容图层改为单次原子组变换，并为文本、对白、图片、气泡和形状加入透明命中区域；真实浏览器拖动回归验证所选兄弟图层与主图层位移一致。
+- 单集与人工生图任务的异步创建期间锁定工作台，并用 episode/panel/revision 身份校验丢弃过期响应；Playwright 请求门闩覆盖等待期间的交互。
+- 修正恢复 Runbook：先停止本地独立 `uvicorn` 进程再停止 PostgreSQL，恢复后明确启动 API；SHA256SUMS 使用与 `shasum -c` 一致的相对路径。
+- RED → GREEN：新增门闩测试在锁定实现前因缺少 `inert` 失败；画布拖动在透明命中层实现前无法使保存按钮变脏。修复后完整运行 `bash scripts/verify-v1.sh`：FastAPI 95 passed、Vitest 73 passed、Playwright Chromium 16 passed、Vite/TypeScript production build 成功；`git diff --check` 通过。
+- 远端验证：当前提交的 push 与 PR 两次 GitHub Actions API/web jobs 均通过，GitGuardian Security Checks 通过；记录见 [发布检查表](../../qa/V1-release-checklist.md)。
+- 发布状态：Draft PR #1 保持待审；AC-25、发布版本验证日志和生产配置检查仍未满足 release gate。
+- 后续探测记录：在临时 SQLite API 实例通过管理员端点发起一次真实探测；请求未返回报告，等待无响应后被人工中断，临时目录已清理且未留存事件/PNG。结果未知，不计入 AC-25 通过或失败证据；此前 PostgreSQL-backed API 探测仍为最后一条已完成结果。
+- 当前提交复验：在 `7bde8b0` 运行 `bash scripts/verify-v1.sh`，FastAPI 95、Vitest 73、Playwright Chromium 16 和 production build 全部通过；终端日志保存于 `docs/qa/evidence/verify-v1-7bde8b0.log`。本次后续提交只更新验证记录与终端日志，不改应用代码。
+- 兼容运行时检查（2026-10-15）：Homebrew CLI `0.162.1` 是本机稳定版；Codex 桌面应用报告 up to date，但其捆绑 CLI 是 `0.162.0-alpha.17.2`。两者均以 ChatGPT 登录并声明 ImageGen；将桌面捆绑 CLI 通过临时 PATH 交给管理员 API probe 后明确超时（`e2e_verified=false`），API 未缓存能力且未创建 run/candidate。官方 ChatGPT-plan App Server 限制明确不支持 Image Generation。证据见 `docs/qa/evidence/codex-bundled-runtime-probe-2026-10-15.json`；当前主机没有满足 AC-25 的兼容运行时，PR 继续 Draft。
+
+### AC-25 runtime path follow-up（2026-10-15）
+
+- RED → GREEN：先新增环境变量读取、显式绝对路径优先级、无效路径不得退回 PATH、管理员路由传播配置路径测试；初次失败 4 项均因配置接口尚未实现。实现后能力专测 11 passed；能力、Codex run 与 Patch proposal 相关测试共 20 passed。
+- 实现：API 支持部署变量 `IP_STUDIO_CODEX_IMAGEGEN_EXECUTABLE`（本机路径示例应填实际 `codex` binary），并将选择应用到只读能力检查、管理员真实 probe 和 run 前复核。无效或相对路径返回 `unavailable`；网页请求不能传入任意 binary 路径。实际通过的 path/version 仍绑定 E2E 缓存。
+- 真实验收：配置该变量指向 Cursor 扩展内 `/Users/inupedia/.cursor/extensions/openai.chatgpt-26.908.40401-darwin-arm64/bin/macos-aarch64/codex`（`0.154.0-alpha.6.2`），管理员调用 `POST /api/v1/codex/capabilities/probe` 返回 HTTP 200、ImageGen advertised、命令 exit code `1`、`e2e_verified=false`。未缓存 runtime，也未产生 run/candidate。证据见 [configured runtime probe](../../qa/evidence/codex-configured-runtime-probe-2026-10-15.json)。
+- 完整验证：`bash scripts/verify-v1.sh` 通过：FastAPI 98 passed、Vitest 73 passed、Playwright Chromium 16 passed、production build 成功。
+- 交付：`9956545 feat(codex): configure local ImageGen executable` 已推送到 Draft PR #1；push/PR API 与 Web jobs、GitGuardian 均通过（[push CI](https://github.com/Inupedia/IP-STUDIO/actions/runs/38666402140)、[PR CI](https://github.com/Inupedia/IP-STUDIO/actions/runs/38666407017)）。
+- 状态：路径配置实现已具备；Homebrew、桌面捆绑和 Cursor 捆绑 runtime 均未通过 E2E gate。AC-25 保持 `BLOCKED`，仍需实际兼容的可执行文件/host 通过管理员 PNG 探测并完成候选审核回流；不以 environment override 本身清除产品门槛。
+
+### AC-25 官方能力与运行时兼容性调查（2026-10-15）
+
+- 检索官方 OpenAI 文档：ChatGPT-plan 通过 Sign in with ChatGPT 与 Responses API（包括 Codex App Server）时，Image Generation 明确属于不支持的 hosted tool；App Server 使用 HTTP/SSE Responses transport。该限制证明此 App Server 路径不能作为受支持解法，但 IP Studio 的真实 probe 调用 `codex exec`，目前没有 transport/stderr 证据可以据此断定 subprocess exit code `1` 的根因。
+- 检索 OpenAI Codex 一方 issue tracker：[issue #37496](https://github.com/openai/codex/issues/37496) 报告 ChatGPT-auth CLI 会话 feature flag 为 true 但工具未注入；[issue #44039](https://github.com/openai/codex/issues/44039) 报告 desktop 与 standalone CLI 会话工具均不可调用。两条报告在检查时均开放，未发现 maintainer 确认的修复步骤，故只作上游现象参考。
+- 官方 [ImageGen skill](https://github.com/openai/codex/blob/main/codex-rs/skills/src/assets/samples/imagegen/SKILL.md) 将 session 内置 `image_gen` 作为默认路线；CLI fallback 明确需要 `OPENAI_API_KEY`，属于本项目不允许的 developer API 路线。检索未找到由外部服务受支持地调用当前 Codex task 注入工具的接口，也未找到强制 CLI tool provisioning 的受支持开关。
+- 结论：暂无符合产品约束且有文档支持的兼容 runtime 路径；继续保留 AC-25 `BLOCKED` 与 ChatGPT Web 人工导入回退，不访问 private endpoint/Cookie，不改用 developer API。管理员 API 只有在 native event、PNG 解码和候选回流全链路真实通过后才可解除该门槛。
+- 文档变更验证：`git diff --check` 通过；提交 `1d25e8a` 的 push 与 PR V1 CI（API/PostgreSQL migration、Vitest、Playwright Chromium、production build）全部通过，GitGuardian Security Checks 通过。详见[push run](https://github.com/Inupedia/IP-STUDIO/actions/runs/38668230108)和[PR run](https://github.com/Inupedia/IP-STUDIO/actions/runs/38668233621)。
+- 新的官方 CLI 诊断（2026-10-15）：Homebrew `codex-cli 0.162.1` 在默认 model `gpt-6.1-sol` 上显式传入 `--enable image_generation` 后 exit code 为 `0` 并写出 1254×1254 可解码 PNG，但与 API 共用的 `_contains_image_generation_call` 校验未找到成功 native event；该输出不是已验证的 native ImageGen 结果，也不是 API-owned probe。证据见 `docs/qa/evidence/codex-explicit-model-runtime-probe-2026-10-15.json`。显式 feature/model 参数不能解除 AC-25。
+- 当前 PR snapshot 验证（2026-10-15）：`bash scripts/verify-v1.sh` 在提交 `3cff5e3` 的代码状态通过，FastAPI 98、Vitest 73、Playwright Chromium 16、production build 全绿；日志记录在 `docs/qa/evidence/verify-v1-3cff5e3.log`。3cff5e3 的 push/PR GitHub Actions 与 GitGuardian 均通过。版本化 release artifact 验证与真实 production host 配置仍待执行；当前没有选定的主机或域名。
+- AC-25 结论已于 2026-10-15 更新：Homebrew Codex CLI `0.162.1` 的原生 ImageGen 结果写在持久化 thread history，但该版本 `codex exec --json` 不输出对应 JSONL item。IP Studio 改为用公开 App Server `thread/read` 读取同一 thread 的完成态 `imageGeneration` item 与 `savedPath`，并要求 Codex PNG 与 job PNG 逐字节一致且完整解码；验证后删除 probe thread 与其 Codex 生成文件。管理员 API probe 返回 `available/e2e_verified=true`，同一 API 实例的真实 run 创建 `codex_native/pending_review` 候选，管理员审批后状态为 `approved`。脱敏证据见 `docs/qa/evidence/ac25-native-imagegen-app-server-readback-2026-10-15.json`。
+- AC-25 readback 本轮完整验证（2026-10-15）：`bash scripts/verify-v1.sh` 通过，FastAPI 104、Vitest 73、Playwright Chromium 16、production build 全绿；日志记录在 `docs/qa/evidence/verify-v1-ac25-app-server-readback-2026-10-15.log`。回归测试经历 RED（历史读取失败会遗留 thread PNG）→ GREEN（只清理本 thread 目录中的 PNG，保留其他内容），专项 Codex API 测试 24 passed。使用同一临时 FastAPI/SQLite/Blob 实例再次真实管理员 probe、Codex run 与候选审批，结果依次为 `available/e2e_verified=true`、`candidate_ready`、`pending_review -> approved`；脱敏证据见 `docs/qa/evidence/ac25-native-imagegen-app-server-readback-2026-10-15.json`。
+- Final self-review covered App Server protocol/lifecycle, same-thread provenance, PNG bounds/decode, generated-path containment and failure cleanup, API failure behavior, tests, and docs against V1 invariants. The independent read-only static review of `086f030..9ea41e6` found no actionable defects; its scope and limits are recorded in [the review note](../../qa/independent-pr-review-2026-10-15.md).
+- AC-25 readback and thread-image cleanup commits `b6547fb`, `bc816e8`, `0ac1a95`, `69f896a`, and `d175dfb` are on PR #1. At current docs head `6796209`, push/PR API/Web jobs and GitGuardian passed: [push run](https://github.com/Inupedia/IP-STUDIO/actions/runs/38681085775), [PR run](https://github.com/Inupedia/IP-STUDIO/actions/runs/38681089691).
+- V1 RC artifact verification (2026-10-15): exported the exact clean PR snapshot as `v1.0.0-rc.1+g6796209`, copied the roughly 700 KiB archive to the local ignored `release-artifacts/` directory, and verified the extracted archive after frozen pnpm/uv dependency installs. Full verifier passed with FastAPI 104, Vitest 73, Playwright Chromium 16, and production build. SHA-256 and provenance are in `docs/qa/evidence/v1-release-candidate-2026-10-15.json`; output is in `docs/qa/evidence/verify-v1-v1.0.0-rc.1-g6796209.log`.
+- Independent read-only static review is complete; no GitHub collaborator approval was submitted. PR #1 merged to `main` at `be9982c`. The extracted merge snapshot passed `bash scripts/verify-v1.sh` (FastAPI 104, Vitest 73, Playwright Chromium 16, production build); see [post-merge snapshot evidence](../../qa/evidence/v1-post-merge-snapshot-2026-10-15.json) and [verifier log](../../qa/evidence/verify-v1-v1.0.0-gbe9982c.log). A formal version tag/distributable release and actual production-host configuration remain open; no host or domain has been selected.

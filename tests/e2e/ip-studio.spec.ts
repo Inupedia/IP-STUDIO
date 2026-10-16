@@ -26,8 +26,19 @@ function readPngParts(body: Buffer, contentType: string): Buffer[] {
   });
 }
 
-async function startWorkspace(page: Page, options: { empty?: boolean; sharedState?: any; pageCount?: number; elementCount?: number } = {}) {
+async function startWorkspace(page: Page, options: { empty?: boolean; sharedState?: any; pageCount?: number; elementCount?: number; assetVersionRegression?: boolean } = {}) {
   const state = options.sharedState ?? structuredClone(seed);
+  if (options.assetVersionRegression) {
+    const frozenVersion = state.assets[0];
+    state.historicalAssetVersions = { [frozenVersion.asset_version_id]: frozenVersion };
+    state.assetVersionLookups = [];
+    state.assets[0] = {
+      ...frozenVersion,
+      asset_version_id: '10000000-0000-4000-8000-000000000054',
+      version_no: frozenVersion.version_no + 1,
+      sha256: 'd'.repeat(64),
+    };
+  }
   const initialVersion = {
     brand_template_version_id: state.brand_version_id,
     brand_template_id: state.brand_template_id,
@@ -97,6 +108,12 @@ async function startWorkspace(page: Page, options: { empty?: boolean; sharedStat
       const body = request.postDataJSON() as { number: number; title: string };
       const created = { id: '10000000-0000-4000-8000-000000000091', series_id: episodeCollection[1], number: body.number, title: body.title, status: 'draft', created_at: '2026-10-14T00:00:00Z' };
       state.episodes.push(created);
+      if (state.nextEpisodeCreateGate) {
+        const gate = state.nextEpisodeCreateGate as Promise<void>;
+        delete state.nextEpisodeCreateGate;
+        state.onEpisodeCreateStarted?.();
+        await gate;
+      }
       return json(created, 201);
     }
     if (method === 'POST' && path === `/api/v1/ips/${state.ip.id}/brand-templates`) {
@@ -121,6 +138,12 @@ async function startWorkspace(page: Page, options: { empty?: boolean; sharedStat
     const scriptsMatch = path.match(/^\/api\/v1\/episodes\/([^/]+)\/scripts$/);
     if (scriptsMatch && method === 'GET') return json((state.scripts ??= {})[scriptsMatch[1]] ?? []);
     if (scriptsMatch && method === 'POST') {
+      if (state.nextScriptSaveGate) {
+        const gate = state.nextScriptSaveGate as Promise<void>;
+        delete state.nextScriptSaveGate;
+        state.onScriptSaveStarted?.();
+        await gate;
+      }
       const revisions = (state.scripts ??= {})[scriptsMatch[1]] ??= [];
       const body = request.postDataJSON() as { base_revision: number; source_markdown: string; script: any };
       if (body.base_revision !== revisions.length) return json({ detail: 'Script revision changed' }, 409);
@@ -137,9 +160,16 @@ async function startWorkspace(page: Page, options: { empty?: boolean; sharedStat
     }
     const materializeMatch = path.match(/^\/api\/v1\/episodes\/([^/]+)\/scripts\/(\d+)\/materialize$/);
     if (materializeMatch && method === 'POST') {
+      if (state.nextMaterializeGate) {
+        const gate = state.nextMaterializeGate as Promise<void>;
+        delete state.nextMaterializeGate;
+        state.onMaterializeStarted?.();
+        await gate;
+      }
       const [, episodeId, revisionNo] = materializeMatch;
       const scriptRevision = (state.scripts?.[episodeId] ?? []).find((item: any) => item.revision_no === Number(revisionNo));
       if (!scriptRevision) return json({ detail: 'Script revision not found' }, 404);
+      const body = request.postDataJSON() as { base_document_revision: number; confirm_dialogue_sync: boolean };
       let panelOrder = 0;
       const panels = scriptRevision.script.scenes.flatMap((scene: any) => {
         const dialogues = new Map(scene.dialogues.map((dialogue: any) => [dialogue.dialogue_id, dialogue]));
@@ -158,10 +188,43 @@ async function startWorkspace(page: Page, options: { empty?: boolean; sharedStat
           dialogues: panel.dialogue_ids.map((id: string) => dialogues.get(id)),
         }));
       });
-      return json({ script_revision_no: Number(revisionNo), document_revision: state.documents[episodeId]?.revision ?? 0, panels, synced_dialogue_count: 0, dialogue_changes: [] });
+      const current = state.documents[episodeId];
+      const plannedChat = panels.flatMap((panel: any) => panel.dialogues).find((dialogue: any) => dialogue?.kind === 'chat_message');
+      const firstChat = current?.document.pages.flatMap((canvasPage: any) => canvasPage.panels)
+        .flatMap((canvasPanel: any) => canvasPanel.elements)
+        .find((element: any) => element.type === 'chat_message');
+      const dialogueChanges = plannedChat && firstChat && plannedChat.text !== firstChat.props.text
+        ? [{ panel_order: 1, element_id: firstChat.id, old_text: firstChat.props.text, new_text: plannedChat.text }]
+        : [];
+      if (dialogueChanges.length > 0 && !body.confirm_dialogue_sync) {
+        return json({ detail: { message: '剧本对白与画布中已有聊天文字不同', dialogue_changes: dialogueChanges } }, 409);
+      }
+      if (dialogueChanges.length > 0 && current) {
+        if (body.base_document_revision !== current.revision) return json({ detail: 'Document revision changed' }, 409);
+        const document = structuredClone(current.document);
+        const changeById = new Map(dialogueChanges.map((change: any) => [change.element_id, change.new_text]));
+        for (const canvasPage of document.pages) {
+          for (const canvasPanel of canvasPage.panels) {
+            for (const element of canvasPanel.elements) {
+              if (changeById.has(element.id)) element.props.text = changeById.get(element.id);
+            }
+          }
+        }
+        const revision = current.revision + 1;
+        document.revision = revision;
+        state.documents[episodeId] = { revision, document };
+      }
+      const documentRevision = state.documents[episodeId]?.revision ?? 0;
+      return json({ script_revision_no: Number(revisionNo), document_revision: documentRevision, panels, synced_dialogue_count: body.confirm_dialogue_sync ? dialogueChanges.length : 0, dialogue_changes: dialogueChanges });
     }
     const taskCollection = path.match(/^\/api\/v1\/episodes\/([^/]+)\/generation-tasks$/);
     if (taskCollection && method === 'POST') {
+      if (state.nextGenerationTaskGate) {
+        const gate = state.nextGenerationTaskGate as Promise<void>;
+        delete state.nextGenerationTaskGate;
+        state.onGenerationTaskStarted?.();
+        await gate;
+      }
       const episodeId = taskCollection[1];
       const body = request.postDataJSON() as { script_revision_no: number; panel_id: string };
       const scriptRevision = (state.scripts?.[episodeId] ?? []).find((item: any) => item.revision_no === body.script_revision_no);
@@ -259,6 +322,12 @@ async function startWorkspace(page: Page, options: { empty?: boolean; sharedStat
       candidate.reviewed_by_user_id = state.admin.id;
       return json(candidate);
     }
+    const assetVersionMatch = path.match(/^\/api\/v1\/assets\/versions\/([^/]+)$/);
+    if (method === 'GET' && assetVersionMatch) {
+      state.assetVersionLookups?.push(assetVersionMatch[1]);
+      const historical = state.historicalAssetVersions?.[assetVersionMatch[1]];
+      return historical ? json(historical) : json({ detail: 'Asset version not found' }, 404);
+    }
     if (method === 'GET' && path === '/api/v1/assets') return json(state.assets);
     if (method === 'GET' && path === `/api/v1/series/${state.series.id}/episodes`) return json(state.episodes);
     if (method === 'GET' && path.startsWith('/api/v1/assets/') && path.endsWith('/content')) {
@@ -317,6 +386,161 @@ async function startWorkspace(page: Page, options: { empty?: boolean; sharedStat
   await expect(page.getByRole('heading', { level: 1, name: state.ip.name })).toBeVisible();
   return state;
 }
+
+test('reopens frozen canvas image versions when the asset library has newer versions', async ({ page }) => {
+  const state = await startWorkspace(page, { assetVersionRegression: true });
+  await page.getByRole('tab', { name: '漫画工作台' }).click();
+
+  await expect(page.getByRole('heading', { name: 'EP.01 · 在吗？' })).toBeVisible();
+  await expect.poll(() => state.assetVersionLookups).toContain('10000000-0000-4000-8000-000000000051');
+  await expect(page.getByRole('alert')).toHaveCount(0);
+});
+
+test('warns before leaving the comic workspace with unsaved edits', async ({ page }) => {
+  await startWorkspace(page);
+  await page.getByRole('tab', { name: '漫画工作台' }).click();
+  const title = page.getByLabel('页面标题');
+  await title.fill('未保存的新标题');
+  const summary = page.getByLabel('故事概要');
+  await summary.fill('尚未保存的剧本草稿');
+
+  page.once('dialog', (dialog) => dialog.dismiss());
+  await page.getByRole('tab', { name: '素材库' }).click();
+  await expect(page.getByRole('tab', { name: '漫画工作台' })).toHaveAttribute('aria-selected', 'true');
+  await expect(title).toHaveValue('未保存的新标题');
+  await expect(summary).toHaveValue('尚未保存的剧本草稿');
+
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.getByRole('tab', { name: '素材库' }).click();
+  await expect(page.getByRole('tab', { name: '素材库' })).toHaveAttribute('aria-selected', 'true');
+  await page.getByRole('tab', { name: '漫画工作台' }).click();
+  await expect(page.getByLabel('页面标题')).toHaveValue('在吗？');
+  await expect(page.getByLabel('故事概要')).toHaveValue('');
+});
+
+test('confirms before switching episodes with an unsaved script draft', async ({ page }) => {
+  await startWorkspace(page);
+  await page.getByRole('tab', { name: '漫画工作台' }).click();
+  const episodePicker = page.getByLabel('选择单集');
+  const summary = page.getByLabel('故事概要');
+  await summary.fill('只存在于剧本编辑器中的草稿');
+
+  page.once('dialog', (dialog) => dialog.dismiss());
+  await episodePicker.selectOption(seed.episodes[1].id);
+  await expect(episodePicker).toHaveValue(seed.episodes[0].id);
+  await expect(summary).toHaveValue('只存在于剧本编辑器中的草稿');
+
+  page.once('dialog', (dialog) => dialog.accept());
+  await episodePicker.selectOption(seed.episodes[1].id);
+  await expect(episodePicker).toHaveValue(seed.episodes[1].id);
+  await expect(summary).toHaveValue('');
+});
+
+test('prevents episode switching while a script revision is being saved', async ({ page }) => {
+  const state = await startWorkspace(page);
+  await page.getByRole('tab', { name: '漫画工作台' }).click();
+  await page.getByLabel('故事概要').fill('待保存的剧本修订');
+  const saveGate = deferred<void>();
+  const saveStarted = deferred<void>();
+  state.nextScriptSaveGate = saveGate.promise;
+  state.onScriptSaveStarted = saveStarted.resolve;
+
+  await page.getByRole('button', { name: '保存为新修订' }).click();
+  await saveStarted.promise;
+  await expect(page.getByLabel('选择单集')).toBeDisabled();
+  saveGate.resolve();
+  await expect(page.getByText('SCRIPT REVISION · V1')).toBeVisible();
+  await expect(page.getByLabel('选择单集')).toBeEnabled();
+});
+
+test('locks the current canvas while a new episode is being created', async ({ page }) => {
+  const state = await startWorkspace(page);
+  await page.getByRole('tab', { name: '漫画工作台' }).click();
+  await expect(page.getByRole('heading', { name: 'EP.01 · 在吗？' })).toBeVisible();
+  const createGate = deferred<void>();
+  const createStarted = deferred<void>();
+  state.nextEpisodeCreateGate = createGate.promise;
+  state.onEpisodeCreateStarted = createStarted.resolve;
+
+  await page.getByLabel('新单集标题').fill('创建期间的下一集');
+  await page.getByRole('button', { name: '创建单集' }).click();
+  await createStarted.promise;
+
+  await expect(page.locator('.comic-workspace')).toHaveAttribute('inert', '');
+  await expect(page.getByRole('heading', { name: 'EP.01 · 在吗？' })).toBeVisible();
+  createGate.resolve();
+
+  await expect(page.getByRole('heading', { name: 'EP.03 · 创建期间的下一集' })).toBeVisible();
+  await expect(page.locator('.comic-workspace')).not.toHaveAttribute('inert', '');
+});
+
+test('locks the selected episode and panel while a generation task is being created', async ({ page }) => {
+  const state = await startWorkspace(page);
+  await page.getByRole('tab', { name: '漫画工作台' }).click();
+  await page.getByLabel('分集标题').fill('在吗？·任务版');
+  await page.getByLabel('剧情动作 · 场景 1').fill('朋友发来一条消息，卡仔看向手机。');
+  await page.getByRole('button', { name: '＋ 添加画格卡' }).click();
+  await page.getByLabel('分镜动作').fill('任务创建期间保持目标分镜不变。');
+  await page.getByRole('button', { name: '保存为新修订' }).click();
+  await expect(page.getByText('SCRIPT REVISION · V1')).toBeVisible();
+  await page.getByRole('button', { name: '从剧本生成分镜卡' }).click();
+  const taskGate = deferred<void>();
+  const taskStarted = deferred<void>();
+  state.nextGenerationTaskGate = taskGate.promise;
+  state.onGenerationTaskStarted = taskStarted.resolve;
+
+  await page.getByRole('button', { name: '准备 ChatGPT Web 生图任务' }).click();
+  await taskStarted.promise;
+  await expect(page.locator('.comic-workspace')).toHaveAttribute('inert', '');
+  await expect(page.getByLabel('生图目标分镜卡')).toBeDisabled();
+  taskGate.resolve();
+
+  await expect(page.getByRole('heading', { name: '单格生图任务' })).toBeVisible();
+  await expect(page.locator('.comic-workspace')).not.toHaveAttribute('inert', '');
+});
+
+test('clears canvas undo history after confirmed script dialogue sync', async ({ page }) => {
+  const state = await startWorkspace(page);
+  await page.getByRole('tab', { name: '漫画工作台' }).click();
+
+  await page.getByLabel('页面标题').fill('已保存、但历史仍可撤销');
+  await page.getByRole('button', { name: '保存画布' }).click();
+  const toolbar = page.getByRole('toolbar', { name: '画布工具' });
+  await expect(toolbar.getByText('已保存')).toBeVisible();
+  await expect(toolbar.getByRole('button', { name: '撤销' })).toBeEnabled();
+
+  const scene = page.getByRole('group', { name: '场景 1' });
+  await scene.getByRole('button', { name: '＋ 添加对白' }).click();
+  await scene.getByLabel('说话人').fill('朋友');
+  await scene.getByLabel('对白类型 · 朋友').selectOption('chat_message');
+  await scene.getByLabel('对白 · 朋友').fill('脚本更新后的对白');
+  await scene.getByRole('button', { name: '＋ 添加画格卡' }).click();
+  await scene.getByLabel('分镜动作').fill('朋友发来新消息');
+  await page.getByRole('button', { name: '保存为新修订' }).click();
+  await expect(page.getByText('SCRIPT REVISION · V1')).toBeVisible();
+
+  await page.getByRole('button', { name: '从剧本生成分镜卡' }).click();
+  const preview = page.getByRole('alertdialog', { name: '确认同步画布对白' });
+  await expect(preview).toContainText('在吗？');
+  await expect(preview).toContainText('脚本更新后的对白');
+  const materializeGate = deferred<void>();
+  const materializeStarted = deferred<void>();
+  state.nextMaterializeGate = materializeGate.promise;
+  state.onMaterializeStarted = materializeStarted.resolve;
+  await preview.getByRole('button', { name: '确认并同步对白' }).click();
+  await materializeStarted.promise;
+  await expect(page.locator('.comic-workspace')).toHaveAttribute('inert', '');
+  materializeGate.resolve();
+
+  await expect(page.getByRole('status').filter({ hasText: '已同步 1 条对白' })).toBeVisible();
+  await expect(page.locator('.comic-workspace')).not.toHaveAttribute('inert', '');
+  const syncedMessage = state.documents[state.episodes[0].id].document.pages.flatMap((canvasPage: any) => canvasPage.panels)
+    .flatMap((canvasPanel: any) => canvasPanel.elements)
+    .find((element: any) => element.type === 'chat_message' && element.props.text === '脚本更新后的对白');
+  expect(syncedMessage).toBeDefined();
+  await expect(toolbar.getByRole('button', { name: '撤销' })).toBeDisabled();
+  await expect(toolbar.getByRole('button', { name: '重做' })).toBeDisabled();
+});
 
 test('EP01 dialogue direction, scoped edits, EP02 shared brand, and editable PPTX export', async ({ page }, testInfo) => {
   const state = await startWorkspace(page);
@@ -543,4 +767,45 @@ test('thirty canvas elements remain selectable and editable without AI services'
     .find((element: any) => element.id === target.id);
   expect(savedElement.transform.x).toBe(target.transform.x + 10);
   expect(savedElement.transform.y).toBe(target.transform.y + 5);
+});
+
+test('dragging one selected canvas element moves its selected siblings by the same distance', async ({ page }) => {
+  const state = await startWorkspace(page);
+  await page.getByRole('tab', { name: '漫画工作台' }).click();
+  await expect(page.getByRole('heading', { name: 'EP.01 · 在吗？' })).toBeVisible();
+  await expect(page.getByRole('form', { name: '结构化剧本编辑器' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '单格生图' })).toBeVisible();
+  const layerRows = page.locator('.editor-layer-row');
+  await layerRows.nth(0).click();
+  await layerRows.nth(1).click({ modifiers: ['Shift'] });
+  await expect(page.getByText('已选择 2 个图层', { exact: true })).toBeVisible();
+
+  const stage = page.locator('.canvas-stage-transform');
+  await stage.scrollIntoViewIfNeeded();
+  await page.evaluate(async () => {
+    const stageTop = document.querySelector('.canvas-stage-transform')?.getBoundingClientRect().top;
+    if (stageTop !== undefined) {
+      document.documentElement.style.scrollBehavior = 'auto';
+      window.scrollTo(0, window.scrollY + stageTop - 160);
+    }
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+  });
+  const box = await stage.boundingBox();
+  if (!box) throw new Error('Canvas stage is not visible');
+  const start = { x: box.x + (48 + 24 + 180) * 0.7, y: box.y + (48 + 32 + 52) * 0.7 };
+  await page.mouse.move(start.x, start.y);
+  await page.mouse.down();
+  await page.mouse.move(start.x + 14, start.y + 7, { steps: 4 });
+  await page.mouse.up();
+  await expect(page.getByRole('button', { name: '保存画布' })).toBeEnabled();
+  await page.getByRole('button', { name: '保存画布' }).click();
+  await expect(page.getByRole('toolbar', { name: '画布工具' }).getByText('已保存')).toBeVisible();
+
+  const moved = state.documents[state.episodes[0].id].document.pages[0].panels[0].elements;
+  const first = moved.find((element: any) => element.id === '10000000-0000-4000-8000-000000000070');
+  const second = moved.find((element: any) => element.id === '10000000-0000-4000-8000-000000000072');
+  expect(first.transform.x - 24).toBeCloseTo(20, 0);
+  expect(first.transform.y - 32).toBeCloseTo(10, 0);
+  expect(second.transform.x - 544).toBeCloseTo(20, 0);
+  expect(second.transform.y - 142).toBeCloseTo(10, 0);
 });

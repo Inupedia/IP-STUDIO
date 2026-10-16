@@ -1,0 +1,30 @@
+{
+  "version": "1.0.0+gbe9982c",
+  "kind": "post-merge-source-snapshot",
+  "source_ref": "origin/main",
+  "source_revision": "be9982c0d825b287ff3b41df7f7d33a6052cefca",
+  "artifact": {
+    "path": "release-artifacts/ip-studio-v1.0.0-gbe9982c.tar.gz",
+    "format": "git archive tar.gz",
+    "size_bytes": 719537,
+    "sha256": "2fc042e71cd1f63d353dfc1389dc09ed7080256289b5bafed6aad51d4ccbcd51"
+  },
+  "verification": {
+    "executed_from": "extracted final source archive",
+    "dependency_install": [
+      "pnpm install --frozen-lockfile",
+      "uv sync --project services/api --locked --group dev",
+      "pnpm --filter @ip-studio/web exec playwright install chromium"
+    ],
+    "command": "bash scripts/verify-v1.sh",
+    "result": {
+      "fastapi_pytest": "104 passed",
+      "vitest": "73 passed",
+      "playwright_chromium": "16 passed",
+      "vite_typescript_production_build": "passed"
+    },
+    "log": "release-artifacts/verify-v1-v1.0.0-gbe9982c.log"
+  },
+  "release_status": "post-merge snapshot verified locally; no official tag, published release, or production deployment",
+  "verified_date": "2026-10-15"
+}

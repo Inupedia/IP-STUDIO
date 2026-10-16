@@ -1,6 +1,6 @@
 # IP Studio V1 验收矩阵
 
-日期：2026-10-14（Asia/Shanghai）
+日期：2026-10-15（Asia/Shanghai）
 基线：[PRD V1 Definition of Done](../product/PRD-v1.md#9-验收标准definition-of-done)
 
 状态只记录有代码或可复演步骤支持的结果。`BLOCKED` 项仍是发布门槛；不能把本机没有运行的 PostgreSQL 恢复演练或 Codex 原生 ImageGen API 演练算作通过。
@@ -31,7 +31,7 @@
 | AC-22 | PASS | 固定品牌图层不可选中/拖动；批准模板静态元素锁定测试：[ComicEditor.test.tsx](../../apps/web/src/features/editor/ComicEditor.test.tsx)、[test_locked_logo_edit_denied](../../services/api/tests/test_templates.py)。 |
 | AC-23 | PASS | 已批准 Brand Template 不可覆写，派生版本不会改写已有文档引用：[test_brand_immutable_after_approval](../../services/api/tests/test_templates.py)、[test_episode_document_cannot_silently_migrate_brand_version](../../services/api/tests/test_document_conflicts.py)。 |
 | AC-24 | PASS | 浏览器将 Codex ImageGen 状态设为 unsupported，仍可启动 ChatGPT Web 人工任务、导入并审核候选：[ip-studio.spec.ts](../../tests/e2e/ip-studio.spec.ts)；Codex 文案单测：[CodexAssistant.test.tsx](../../apps/web/src/features/codex/CodexAssistant.test.tsx)。 |
-| AC-25 | BLOCKED | 在真实 FastAPI/PostgreSQL session 对管理员调用 `POST /api/v1/codex/capabilities/probe`：provider 声明 `imageGeneration=true`，但本次 CLI 执行未记录可验证的原生 ImageGen 事件或 PNG；重试分别遇到 exit code 1 与无原生事件。API 因未通过探测而正确拒绝启动 run，没有产生候选。OpenAI 当前 ChatGPT-plan App Server 文档称 Responses 路径不支持 Image Generation；它与本次失败相符，但因应用不读取认证凭据，不能视为已确认根因。探测证据、边界与官方资料见[能力矩阵](../architecture/codex-capability-matrix.md)；ChatGPT Web 人工路径持续可用。 |
+| AC-25 | PASS | Homebrew CLI `0.162.1` 的管理员 API probe 返回 `available/e2e_verified=true`。API 从本次 CLI `thread.started` 读取同一持久化 thread 的 App Server history，确认 `imageGeneration/completed` 与 `savedPath`，并要求 native PNG 与受限 probe 输出逐字节匹配后完整解码。相同 API 实例真实生成候选：run 为 `candidate_ready`，`codex_native` 候选先进入 `pending_review`，经管理员批准后成为 `approved`。完整脱敏证据：[API probe + 候选回流](evidence/ac25-native-imagegen-app-server-readback-2026-10-15.json)；实现说明见[能力矩阵](../architecture/codex-capability-matrix.md)。验证使用临时 FastAPI/SQLite/Blob 环境；旧的 PostgreSQL/桌面/Cursor 失败尝试仍保留为历史证据。 |
 | AC-26 | PASS | 跨 IP Patch 与跨 IP 图片替换被拒绝，源文档无副作用：[test_cross_ip_patch_is_denied](../../services/api/tests/test_codex_patches.py)、[test_cross_ip_asset_replacement_is_denied](../../services/api/tests/test_codex_patches.py)。 |
 
 ## 复演命令
@@ -43,4 +43,4 @@ pnpm --filter @ip-studio/web build
 uv run --project services/api pytest -q
 ```
 
-**发布状态：BLOCKED。** AC-25 是矩阵内唯一 `BLOCKED` 验收项；待兼容的本机 Codex 原生 ImageGen 在 IP Studio API 管理员探测中成功生成并验证 PNG，再完成服务端候选回流演练后复核。发布清单中远端 GitHub Actions、发布版本验证日志和生产配置检查也尚未完成。
+**验收状态：AC-01～AC-26 全部 PASS。** PR #1 head `53f9952` 的 push/PR CI 与 GitGuardian 已通过，并已合并到 `main`（`be9982c`）。`v1.0.0-rc.1+g6796209` 与合并后的源码快照均通过完整 verifier；独立只读静态代码审查未发现可操作缺陷。正式版本 tag/发布制品和实际生产环境配置仍待完成，详见 [V1 发布检查表](V1-release-checklist.md)。

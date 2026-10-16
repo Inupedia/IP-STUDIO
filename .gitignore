@@ -29,6 +29,9 @@ uploads/
 tmp/
 *.sqlite3
 
+# Local release candidate archives are recorded by checksum, not committed.
+release-artifacts/
+
 # tooling
 .DS_Store
 .idea/

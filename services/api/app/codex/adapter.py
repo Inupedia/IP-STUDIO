@@ -11,7 +11,14 @@ from threading import RLock
 from pathlib import Path
 from zipfile import BadZipFile, ZipFile
 
-from app.codex.capabilities import _contains_image_generation_call
+from app.codex.app_server import (
+    ImageGenerationHistoryItem,
+    cleanup_generated_image_directory,
+    cleanup_generated_image_files,
+    read_thread_image_generation_items,
+    thread_id_from_jsonl,
+    validate_native_image_generation_output,
+)
 from app.codex.image_result import ImageResultError, ValidatedImage, validate_image_result
 
 MAX_REFERENCE_FILES = 100
@@ -147,7 +154,6 @@ def generate_image(
     reference_paths = _extract_frozen_references(bundle, str(_manifest_task_id(bundle)), references_dir)
     output_path = root / "result.png"
     events_path = root / "events.jsonl"
-    message_path = root / "last-message.txt"
     codex_prompt = (
         "Use only Codex's native ImageGen image_generation tool to create the requested comic panel. "
         "Follow this task prompt: \n\n"
@@ -163,14 +169,13 @@ def generate_image(
         codex_path,
         "exec",
         "--skip-git-repo-check",
-        "--ephemeral",
         "--json",
+        "--enable",
+        "image_generation",
         "--sandbox",
         "workspace-write",
         "-C",
         str(root),
-        "--output-last-message",
-        str(message_path),
     ]
     for reference in reference_paths:
         command.extend(["-i", str(reference)])
@@ -183,6 +188,9 @@ def generate_image(
                 _cancellation_requests.discard(run_key)
                 raise CodexRunCancelled("Codex run was canceled")
     process: subprocess.Popen[bytes] | None = None
+    thread_id: str | None = None
+    image_items: list[ImageGenerationHistoryItem] = []
+    timed_out = False
     try:
         with events_path.open("w", encoding="utf-8") as event_file:
             process = subprocess.Popen(
@@ -201,14 +209,10 @@ def generate_image(
                         _processes[run_key] = process
             try:
                 return_code = process.wait(timeout=timeout_seconds)
-            except subprocess.TimeoutExpired as error:
-                process.terminate()
-                try:
-                    process.wait(timeout=3)
-                except subprocess.TimeoutExpired:
-                    process.kill()
-                    process.wait(timeout=3)
-                raise ImageResultError("Codex ImageGen timed out") from error
+            except subprocess.TimeoutExpired:
+                timed_out = True
+                _terminate_process_tree(process)
+                return_code = process.returncode
             finally:
                 if run_key is not None:
                     with _process_lock:
@@ -219,13 +223,40 @@ def generate_image(
                     was_cancelled = False
     except OSError as error:
         raise ImageResultError("Codex CLI could not be started") from error
-    if was_cancelled:
-        raise CodexRunCancelled("Codex run was canceled")
-    if return_code != 0:
-        raise ImageResultError(f"Codex ImageGen failed with exit code {return_code}")
-    if not _contains_image_generation_call(events_path):
-        raise ImageResultError("Codex run did not record a successful native ImageGen call")
-    return validate_image_result(output_path, root)
+    thread_id = thread_id_from_jsonl(events_path)
+    try:
+        if thread_id is not None:
+            try:
+                image_items = read_thread_image_generation_items(
+                    codex_path,
+                    thread_id,
+                    timeout_seconds=30.0,
+                    delete_thread_after_read=True,
+                )
+            except (OSError, RuntimeError, TimeoutError, subprocess.SubprocessError) as error:
+                if timed_out:
+                    raise ImageResultError("Codex ImageGen timed out") from error
+                if was_cancelled:
+                    raise CodexRunCancelled("Codex run was canceled") from error
+                raise ImageResultError("Codex App Server could not read the native ImageGen result") from error
+        if was_cancelled:
+            raise CodexRunCancelled("Codex run was canceled")
+        if timed_out:
+            raise ImageResultError("Codex ImageGen timed out")
+        if return_code != 0:
+            raise ImageResultError(f"Codex ImageGen failed with exit code {return_code}")
+        if thread_id is None:
+            raise ImageResultError("Codex run did not produce a persistent session ID")
+        if not image_items:
+            raise ImageResultError("Codex run did not record a successful native ImageGen call")
+        try:
+            return validate_native_image_generation_output(image_items, thread_id, output_path, root)
+        except ImageResultError as error:
+            raise ImageResultError("Codex run did not produce a matching native ImageGen PNG") from error
+    finally:
+        if thread_id is not None:
+            cleanup_generated_image_files(image_items, thread_id)
+            cleanup_generated_image_directory(thread_id)
 
 
 def _manifest_task_id(bundle: bytes) -> str:

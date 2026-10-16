@@ -39,9 +39,9 @@
 - Consumes: 本地 Codex（如安装），Phase 03 手工生成入口
 - Produces: `probe_capabilities() -> CapabilityReport`；GET /api/v1/codex/capabilities -> `available/unavailable/needs_auth/unsupported` + reason；真实 probe 需验证可生成解码图片
 
-- [x] **Step 1: Write the failing test** — 覆盖 CLI 缺失、未登录、provider 未暴露 ImageGen、仅声明能力不可直接标可用、API GET 不触发生图、显式 probe 必须有原生 ImageGen 事件及可解码 PNG。
+- [x] **Step 1: Write the failing test** — 覆盖 CLI 缺失、未登录、provider 未暴露 ImageGen、仅声明能力不可直接标可用、API GET 不触发生图、显式 probe 必须回读同一 Codex thread 的原生 ImageGen item，并校验对应可解码 PNG。
 - [x] **Step 2: Verify RED** — 功能模块尚不存在时测试因 `app.codex` 缺失而失败；显式 probe API 实现前对应测试因缺少路由/调用器而失败，均为预期功能缺失。
-- [x] **Step 3: Implement minimally** — 使用 `codex login status` 和公开 App Server `modelProvider/capabilities/read`；GET 只读且不消耗生成额度，管理员 POST 才会启动临时、受限、可超时的 ImageGen E2E probe。要求事件记录中出现原生 ImageGen 调用、路径处于探测目录、PNG 魔数/解码/尺寸/大小均有效；仅缓存通过的 CLI 路径与版本。记录当前环境实际 CLI/App Server/ImageGen 证据及瞬时网络限制。
+- [x] **Step 3: Implement minimally** — 使用 `codex login status` 和公开 App Server `modelProvider/capabilities/read`；GET 只读且不消耗生成额度，管理员 POST 才会启动受限、可超时的 ImageGen probe。probe 通过 CLI JSONL 的 thread ID 调用 App Server `thread/read`，要求该 thread 有完成的原生 ImageGen item，且 `savedPath` PNG 与探测目录输出逐字节一致并完整解码；回读后删除探测 thread/生成图。仅缓存通过的 CLI 路径与版本。
 - [x] **Step 4: Verify GREEN** — 能力专项后端 9 passed；完整后端 `uv run --project services/api pytest -q`（58 passed）；现场只读 probe 实测 Codex CLI `0.162.1`、登录有效、App Server `imageGeneration=true`；一次真实 CLI ImageGen 产物经 Pillow 校验为有效 `1254×1254` PNG；`git diff --check` 通过。
 - [x] **Step 5: Commit** — `feat(codex): probe real local imagegen capabilities`。
 
@@ -57,9 +57,9 @@
 - Consumes: 能力 PoC、GenerationTask 与 Phase 01 AssetStore
 - Produces: `generate_image(task_id: UUID, inputs: GenerationInputs) -> GenerationCandidate`；`validate_image_result(path: Path, allowed_dir: Path) -> ValidatedImage`
 
-- [x] **Step 1: Write the failing test** — 覆盖有效 PNG 待审候选、无输出失败、输出目录越界拒绝、真实原生 ImageGen 事件门槛、运行取消和 Codex 不可用时人工回退。
+- [x] **Step 1: Write the failing test** — 覆盖有效 PNG 待审候选、无输出失败、输出目录越界拒绝、App Server 历史里的真实原生 ImageGen item 与 saved PNG 匹配门槛、运行取消和 Codex 不可用时人工回退。
 - [x] **Step 2: Verify RED** — 测试先因 `app.codex.image_result` 和 `app.api.codex_runs` 缺失而按预期失败，没有依赖缺失导致的假 RED。
-- [x] **Step 3: Implement minimally** — 使用本机 Codex CLI `exec --json --sandbox workspace-write`；只附加校验过的冻结参考包；限定 job 临时目录、PNG/JPEG 魔数与 Pillow 解码、像素/字节上限和成功原生 ImageGen 事件；支持超时、管理员取消与同任务并发锁。结果以 `codex_native` 来源入库并关联待审候选，不自动审批。
+- [x] **Step 3: Implement minimally** — 使用本机 Codex CLI `exec --json --enable image_generation --sandbox workspace-write`；只附加校验过的冻结参考包；从同一持久化 Codex thread 的 App Server history 确认成功原生 ImageGen item，要求生成 `savedPath` 与 job 临时目录 PNG 匹配且通过 Pillow 完整解码、像素/字节上限；回读后删除该 thread 与 Codex 原生副本。支持超时、管理员取消与同任务并发锁。结果以 `codex_native` 来源入库并关联待审候选，不自动审批。
 - [x] **Step 4: Verify GREEN** — 专项 API/Adapter `uv run --project services/api pytest services/api/tests/test_codex_runs.py -v`（6 passed）；完整后端（64 passed）；完整前端（42 passed）；Codex + Generation 合同（5 passed）；Vite/TypeScript build 成功；SQLite 0010 migration upgrade、`alembic check`、downgrade base、upgrade head；`git diff --check` 通过。
 - [x] **Step 5: Commit** — `feat(codex): execute gated imagegen and import candidates`。
 
@@ -98,4 +98,48 @@
 - [x] **Step 3: Implement minimally** — 建立 PatchPreview 差异、批准/拒绝审计和原子 CAS 应用；CLI 使用临时工作目录、只读 sandbox、严格输出 schema；界面说明人工批准与 ImageGen/文字建议能力边界。
 - [x] **Step 4: Verify GREEN** — `uv run --project services/api pytest -q`（77 passed）；`pnpm --filter @ip-studio/web test`（48 passed）；Contracts 专项 8 passed；Vite/TypeScript build 成功；SQLite Alembic downgrade base、upgrade head、`alembic check` 均通过；`git diff --check` 通过。
 - [x] **Step 5: Commit** — `feat(codex): approve scoped edits with reliable fallback`。
+
+
+### Runtime-selection follow-up: explicit ImageGen executable path
+
+**Goal:** Let an API deployment select its intended local Codex CLI even when that binary is not on the API process `PATH`, without weakening AC-25's real-generation gate.
+
+**Files:**
+- Update: `services/api/app/config.py; services/api/app/main.py; services/api/app/codex/capabilities.py`
+- Update: `services/api/app/api/codex.py; services/api/app/api/codex_runs.py; .env.example`
+- Test: `services/api/tests/test_codex_capabilities.py`
+
+- [x] **Step 1: Write failing tests** — verify environment loading, configured absolute path precedence, invalid path rejection without PATH fallback, and propagation through capability/run gates.
+- [x] **Step 2: Verify RED** — new tests failed on the missing configured-path parameter and app setting.
+- [x] **Step 3: Implement minimally** — add the operator-only `IP_STUDIO_CODEX_IMAGEGEN_EXECUTABLE` setting; resolve and validate the absolute executable path; pass it through capability and run verification. Invalid configuration reports unavailable and never falls back to another CLI. Browser/API request payloads cannot supply executable paths.
+- [x] **Step 4: Verify GREEN** — capability/Codex-run/Patch-proposal tests passed (20); full `bash scripts/verify-v1.sh` passed (FastAPI 98, Vitest 73, Playwright Chromium 16, production build). API-owned SQLite probe of Cursor CLI `0.154.0-alpha.6.2` returned exit code `1`, so it did not pass the native event + PNG gate and no runtime was cached.
+- [x] **Step 5: Commit and remote verification** — commit `9956545 feat(codex): configure local ImageGen executable`; push/PR API and Web CI plus GitGuardian passed. AC-25 remains blocked until a compatible runtime passes API-owned native ImageGen and candidate return/approval.
+
+
+### AC-25 JSONL history readback follow-up (2026-10-15)
+
+**Cause established:** Codex CLI `0.162.1` can invoke native ImageGen and persist a completed
+`ImageGeneration` item, but its `codex exec --json` serializer does not emit that item as JSONL.
+The first IP Studio verifier watched only JSONL `item.completed` records, so it rejected a valid
+native tool run even when the CLI produced a decodable PNG.
+
+- [x] **Step 1: Write failing tests** — cover `thread.started` ID parsing, public `thread/read`
+  response extraction without retaining base64, same-thread completed ImageGen status, safe
+  `savedPath` scoping, exact PNG byte matching, thread deletion, and non-native rejection.
+- [x] **Step 2: Verify RED** — tests were written against the new App Server-history contract;
+  the focused suite exposed incorrect method ordering and mismatch feedback before green.
+- [x] **Step 3: Implement** — invoke persistent `codex exec --json`, read its generated thread via
+  the local public App Server `thread/read`, require a completed `imageGeneration` item and exact
+  PNG match, then delete the probe thread and its per-thread Codex PNG. Generation runs use the
+  same verifier before an asset can become a `codex_native` candidate.
+- [x] **Step 4: Verify** — 24 focused API tests passed. Authenticated FastAPI administrator probe
+  returned `available/e2e_verified=true` with Homebrew CLI `0.162.1`; a real API-owned run on the
+  cleanup-fix tree created a pending-review `codex_native` candidate, and admin approval moved it to
+  `approved` in a disposable SQLite/Blob environment. Direct App Server verification confirmed the
+  throwaway probe thread and image could be deleted. Sanitized evidence:
+  [AC-25 App Server readback](../../qa/evidence/ac25-native-imagegen-app-server-readback-2026-10-15.json).
+- [ ] **Step 5: Commit and remote verification** — full verifier and author self-review passed;
+  commits `b6547fb`, `bc816e8`, and `0ac1a95` are pushed to PR #1. Push/PR CI and GitGuardian passed
+  for the thread-directory cleanup fix at head `d175dfb` (implementation `69f896a`). Independent
+  PR review is pending.
 

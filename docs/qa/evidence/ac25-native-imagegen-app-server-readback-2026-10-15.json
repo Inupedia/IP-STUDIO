@@ -1,0 +1,58 @@
+{
+  "observed_date": "2026-10-15",
+  "timezone": "Asia/Shanghai",
+  "runtime": {
+    "configured_path": "/opt/homebrew/bin/codex",
+    "resolved_path": "/opt/homebrew/Caskroom/codex/0.162.1/bin/codex",
+    "version": "codex-cli 0.162.1",
+    "authentication": "ChatGPT login; credentials were not read by IP Studio"
+  },
+  "api_owned_capability_probe": {
+    "endpoint": "POST /api/v1/codex/capabilities/probe",
+    "http_status": 200,
+    "status": "available",
+    "image_generation_advertised": true,
+    "e2e_verified": true,
+    "evidence": [
+      "The API started codex exec and captured its thread.started ID.",
+      "The local public Codex App Server thread/read returned a completed imageGeneration item and savedPath for that same thread.",
+      "The saved PNG matched the probe output byte for byte and passed the normal bounded PNG decoder."
+    ]
+  },
+  "candidate_round_trip": {
+    "api_owned_probe_and_run_used_same_application_instance": true,
+    "run_status": "candidate_ready",
+    "asset_source_type": "codex_native",
+    "status_before_admin_review": "pending_review",
+    "admin_approval_http_status": 200,
+    "status_after_admin_review": "approved"
+  },
+  "reverification_after_thread_directory_cleanup": {
+    "based_on_head": "0ac1a95",
+    "cleanup_fix_commit": "69f896a",
+    "api_owned_probe": "available/e2e_verified=true",
+    "real_codex_run": "candidate_ready",
+    "candidate_review": "pending_review -> approved",
+    "database_and_blob_storage": "temporary directories removed after the run",
+    "image_payload_recorded": false
+  },
+  "read_history_failure_cleanup_regression": {
+    "test": "test_imagegen_probe_cleans_thread_scoped_png_when_history_read_fails",
+    "red_green": true,
+    "removes_only": "direct PNG files in the run's Codex generated_images/<thread-id> directory",
+    "preserves": "non-PNG files and files under every other thread directory"
+  },
+  "cli_jsonl_observation": {
+    "version": "codex-cli 0.162.1",
+    "explicit_model_and_image_generation_feature": true,
+    "exit_code": 0,
+    "native_image_generation_item_in_exec_jsonl": false,
+    "native_image_generation_item_in_app_server_thread_read": true
+  },
+  "isolation_and_cleanup": {
+    "database_and_blob_storage": "temporary FastAPI TestClient SQLite/Blob directories; removed after the run",
+    "codex_probe_session": "deleted through the public thread/delete protocol after readback",
+    "codex_generated_png": "removed only from the matching thread's Codex generated_images directory"
+  },
+  "secrets_or_image_payloads_recorded": false
+}

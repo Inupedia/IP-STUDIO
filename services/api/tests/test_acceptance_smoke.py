@@ -1,6 +1,7 @@
 from collections.abc import Iterator
 from copy import deepcopy
 import json
+import secrets
 from pathlib import Path
 from uuid import uuid4
 
@@ -11,8 +12,8 @@ from app.main import create_app
 from app.schemas.canvas import resolve_message_side
 
 TEST_EMAIL = "admin@example.test"
-TEST_PASSWORD = "test-password-long-enough"
-TEST_SECRET = "test-signing-secret-with-at-least-thirty-two-bytes"
+TEST_PASSWORD = secrets.token_urlsafe(24)
+TEST_SECRET = secrets.token_urlsafe(48)
 CANVAS_FIXTURE = Path(__file__).parents[3] / "packages" / "contracts" / "fixtures" / "canvas-v1.json"
 
 

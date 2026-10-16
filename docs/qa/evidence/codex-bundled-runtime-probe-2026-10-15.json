@@ -1,0 +1,17 @@
+{
+  "http_status": 200,
+  "report": {
+    "status": "unavailable",
+    "reason": "Codex ImageGen 探测超时。",
+    "codex_path": "/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex",
+    "codex_version": "codex-cli 0.162.0-alpha.17.2",
+    "app_server_available": true,
+    "image_generation_advertised": true,
+    "e2e_verified": false,
+    "checked_at": "2026-10-15T01:04:32.605277Z"
+  },
+  "cached_path": null,
+  "cached_version": null,
+  "temporary_database": "SQLite",
+  "timeout_seconds": 90
+}
